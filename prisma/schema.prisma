@@ -1,0 +1,376 @@
+// Sales Transition App — domain model
+// Persistence conventions: Prisma + SQLite for local dev, Postgres-ready via DATABASE_URL.
+// Snapshots (JSON) are stored as strings on PlanVersion so historical plans stay reproducible
+// even after templates are edited or republished.
+//
+// NOTE: SQLite has no native enum type, so "enum" fields below are plain
+// Strings. The authoritative value sets live as TypeScript union types next
+// to each domain service (e.g. src/domain/versioning/types.ts) and are
+// enforced with Zod at every API boundary — see src/lib/enums.ts for the
+// full set of allowed values per field.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Identity & authorization
+// ---------------------------------------------------------------------------
+// UserRole: TRANSITION_OWNER | CONTRIBUTOR | REVIEWER | EXECUTIVE_APPROVER
+//         | TEMPLATE_OWNER | ADMINISTRATOR | READ_ONLY_STAKEHOLDER
+
+model User {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  passwordHash  String
+  roles         String // JSON-encoded UserRole[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  ownedTransitions      Transition[]      @relation("TransitionOwner")
+  salesLeadTransitions  Transition[]      @relation("SalesLead")
+  sponsorTransitions    Transition[]      @relation("ExecutiveSponsor")
+  intakeAnswers         IntakeAnswer[]
+  planVersionsCreated   PlanVersion[]     @relation("PlanVersionCreatedBy")
+  approvals             Approval[]
+  auditEvents           AuditEvent[]
+  templatesOwned        Template[]
+  artifactJobsRequested ArtifactJob[]
+}
+
+// ---------------------------------------------------------------------------
+// Transition & intake
+// ---------------------------------------------------------------------------
+// TransitionStatus: DRAFT | INTAKE_IN_PROGRESS | CLASSIFIED | PLAN_IN_PROGRESS
+//                  | READY_FOR_REVIEW | APPROVED | MOBILIZING | ARCHIVED
+// PlanType: SINGLE_SITE | MULTI_SITE | PROGRAM | SPECIALIZED
+
+model Client {
+  id          String       @id @default(cuid())
+  name        String
+  createdAt   DateTime     @default(now())
+  transitions Transition[]
+}
+
+model Transition {
+  id                    String            @id @default(cuid())
+  clientId              String
+  client                Client            @relation(fields: [clientId], references: [id])
+  opportunityId         String?
+  name                  String
+  transitionOwnerId     String
+  transitionOwner       User              @relation("TransitionOwner", fields: [transitionOwnerId], references: [id])
+  salesLeadId           String?
+  salesLead             User?             @relation("SalesLead", fields: [salesLeadId], references: [id])
+  executiveSponsorId    String?
+  executiveSponsor      User?             @relation("ExecutiveSponsor", fields: [executiveSponsorId], references: [id])
+  expectedDecisionDate  DateTime?
+  planType              String
+  status                String            @default("DRAFT")
+  currentPlanVersionId  String?
+  productsInScope       String // JSON string[]
+  createdBy             String
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+
+  intakeAnswers   IntakeAnswer[]
+  classification  Classification?
+  planVersions    PlanVersion[]
+  auditEvents     AuditEvent[]
+
+  @@index([clientId])
+  @@index([opportunityId])
+}
+
+model QuestionDefinition {
+  id              String   @id @default(cuid())
+  key             String   @unique // stable business identifier used by visibility/classification rules, independent of the DB id
+  section         String
+  prompt          String
+  helpText        String?
+  responseType    String // text | number | date | select | multiselect | boolean
+  options         String? // JSON string[] for select/multiselect
+  required        Boolean  @default(false)
+  order           Int
+  visibilityRule  String? // JSON-encoded rule evaluated against prior answers
+  validationRule  String? // JSON-encoded rule (min/max/pattern/etc.)
+  highImpact      Boolean  @default(false)
+  active           Boolean @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  answers IntakeAnswer[]
+
+  @@index([section, order])
+}
+
+model IntakeAnswer {
+  id               String    @id @default(cuid())
+  transitionId     String
+  transition       Transition @relation(fields: [transitionId], references: [id])
+  questionId       String
+  question         QuestionDefinition @relation(fields: [questionId], references: [id])
+  section          String
+  rawTranscript    String? // omitted unless RETAIN_RAW_AUDIO / explicit retention is enabled
+  normalizedValue  String // JSON-encoded normalized value
+  valueType        String
+  source           String // voice | text | imported | manual
+  confidence       Float?
+  isConfirmed      Boolean   @default(false)
+  answeredById     String
+  answeredBy       User      @relation(fields: [answeredById], references: [id])
+  answeredAt       DateTime  @default(now())
+
+  @@unique([transitionId, questionId])
+  @@index([transitionId, section])
+}
+
+model Classification {
+  id                   String   @id @default(cuid())
+  transitionId         String   @unique
+  transition           Transition @relation(fields: [transitionId], references: [id])
+  planType             String
+  productMix           String // JSON string[]
+  siteProfile          String // JSON object
+  complexityLevel      String // low | medium | high | custom
+  integrationProfile   String // JSON object
+  extensionProfile     String // JSON object
+  dataReadinessProfile String // JSON object
+  timelinePressure     String // low | medium | high
+  commercialModel      String // fixed_fee | time_and_materials | other
+  confidenceLevel      String // low | medium | high
+  reasons              String // JSON: { field: string, reason: string, sourceQuestionKeys: string[] }[]
+  isOverridden         Boolean  @default(false)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// Templates (governed assets)
+// ---------------------------------------------------------------------------
+// TemplateType: PLAN_TEMPLATE | QUESTION_SET | ESTIMATION_RULES | PHASE_DURATION
+//             | STAFFING_PATTERN | PRODUCT_MAPPING | COMPLEXITY_FACTORS
+//             | HOLIDAY_CALENDAR | ARTIFACT_TEMPLATE | APPROVAL_POLICY
+// TemplateStatus: DRAFT | REVIEW | PUBLISHED | RETIRED
+
+model Template {
+  id                  String         @id @default(cuid())
+  templateFamilyId    String // stable id shared across versions of "the same" template
+  name                String
+  description         String?
+  type                String
+  ownerId             String
+  owner               User           @relation(fields: [ownerId], references: [id])
+  version             Int
+  status              String         @default("DRAFT")
+  effectiveDate       DateTime?
+  applicablePlanTypes String // JSON PlanType[]
+  applicableProducts  String // JSON string[]
+  changeNotes         String?
+  body                String // JSON-encoded template payload (structure depends on `type`)
+  clonedFromId        String?
+  createdBy           String
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  planVersions PlanVersion[] @relation("PrimaryTemplate")
+
+  @@index([templateFamilyId])
+  @@index([type, status])
+}
+
+// ---------------------------------------------------------------------------
+// Plan versions, phases, roles
+// ---------------------------------------------------------------------------
+// PlanVersionStatus: DRAFT | IN_PROGRESS | READY_FOR_REVIEW | CHANGES_REQUESTED
+//                   | APPROVED | SUPERSEDED | ARCHIVED
+
+model PlanVersion {
+  id                  String            @id @default(cuid())
+  transitionId        String
+  transition          Transition        @relation(fields: [transitionId], references: [id])
+  versionNumber       Int
+  parentVersionId     String?
+  parentVersion       PlanVersion?      @relation("PlanVersionParent", fields: [parentVersionId], references: [id])
+  childVersions       PlanVersion[]     @relation("PlanVersionParent")
+  planType            String
+  scenarioName        String            @default("Baseline")
+  status              String            @default("DRAFT")
+  primaryTemplateId   String
+  primaryTemplate     Template          @relation("PrimaryTemplate", fields: [primaryTemplateId], references: [id])
+  templateSnapshot    String // JSON: exact template version(s) used
+  inputSnapshot       String // JSON: normalized intake + classification + scenario inputs at generation time
+  calculationSnapshot String // JSON: full EstimationResult incl. calculation trace
+  recommended         Boolean           @default(false)
+  approvedAt          DateTime?
+  approvedBy          String?
+  createdById         String
+  createdBy           User              @relation("PlanVersionCreatedBy", fields: [createdById], references: [id])
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+
+  phases          Phase[]
+  roleAllocations RoleAllocation[]
+  assumptions     Assumption[]
+  risks           Risk[]
+  decisions       Decision[]
+  approvals       Approval[]
+  artifactJobs    ArtifactJob[]
+
+  @@unique([transitionId, versionNumber])
+  @@index([transitionId])
+}
+
+model Phase {
+  id            String      @id @default(cuid())
+  planVersionId String
+  planVersion   PlanVersion @relation(fields: [planVersionId], references: [id])
+  phaseType     String // design | build | prepare | deploy
+  name          String
+  sequence      Int
+  durationWeeks Int
+  startDate     DateTime
+  endDate       DateTime
+  hours         Float
+  investment    Float
+
+  @@index([planVersionId])
+}
+
+model RoleAllocation {
+  id                String      @id @default(cuid())
+  planVersionId     String
+  planVersion       PlanVersion @relation(fields: [planVersionId], references: [id])
+  roleName          String
+  resourceGroup     String // design | functional | technical | program
+  productWorkstream String
+  totalHours        Float
+  weeklyHours       String // JSON number[] aligned to plan weeks
+  source            String // template | rule | manual_override
+  overrideReason    String?
+
+  @@index([planVersionId])
+}
+
+// ---------------------------------------------------------------------------
+// Assumptions, risks, decisions
+// ---------------------------------------------------------------------------
+
+model Assumption {
+  id            String      @id @default(cuid())
+  planVersionId String
+  planVersion   PlanVersion @relation(fields: [planVersionId], references: [id])
+  description   String
+  ownerId       String?
+  status        String   @default("open")
+  impact        String   @default("medium")
+  dueDate       DateTime?
+  source        String   @default("intake")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([planVersionId])
+}
+
+model Risk {
+  id            String      @id @default(cuid())
+  planVersionId String
+  planVersion   PlanVersion @relation(fields: [planVersionId], references: [id])
+  description   String
+  ownerId       String?
+  status        String   @default("open")
+  impact        String   @default("medium")
+  dueDate       DateTime?
+  source        String   @default("intake")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([planVersionId])
+}
+
+model Decision {
+  id            String      @id @default(cuid())
+  planVersionId String
+  planVersion   PlanVersion @relation(fields: [planVersionId], references: [id])
+  description   String
+  ownerId       String?
+  status        String   @default("open")
+  impact        String   @default("medium")
+  dueDate       DateTime?
+  source        String   @default("intake")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([planVersionId])
+}
+
+// ---------------------------------------------------------------------------
+// Approval
+// ---------------------------------------------------------------------------
+// ApprovalStatus: PENDING | APPROVED | REJECTED | CHANGES_REQUESTED
+
+model Approval {
+  id            String         @id @default(cuid())
+  planVersionId String
+  planVersion   PlanVersion    @relation(fields: [planVersionId], references: [id])
+  approverId    String
+  approver      User           @relation(fields: [approverId], references: [id])
+  approverRole  String
+  status        String         @default("PENDING")
+  comment       String?
+  requestedAt   DateTime       @default(now())
+  respondedAt   DateTime?
+
+  @@index([planVersionId])
+}
+
+// ---------------------------------------------------------------------------
+// Artifacts
+// ---------------------------------------------------------------------------
+// ArtifactType: SALES_TRANSITION_BRIEF | APPROVED_BURN_PLAN | SDS_STARTER_PACKAGE
+//             | DRAFT_SOW | KICKOFF_PACKAGE
+// ArtifactJobStatus: QUEUED | RUNNING | COMPLETE | FAILED
+
+model ArtifactJob {
+  id             String            @id @default(cuid())
+  planVersionId  String
+  planVersion    PlanVersion       @relation(fields: [planVersionId], references: [id])
+  artifactType   String
+  templateVersion String?
+  status         String            @default("QUEUED")
+  fileReference  String?
+  metadata       String? // JSON: transitionId, planVersionId, generatedAt, status, templateVersion, preparedBy
+  errorMessage   String?
+  requestedById  String
+  requestedBy    User              @relation(fields: [requestedById], references: [id])
+  requestedAt    DateTime          @default(now())
+  completedAt    DateTime?
+
+  @@index([planVersionId])
+}
+
+// ---------------------------------------------------------------------------
+// Audit
+// ---------------------------------------------------------------------------
+
+model AuditEvent {
+  id           String      @id @default(cuid())
+  transitionId String?
+  transition   Transition? @relation(fields: [transitionId], references: [id])
+  actorId      String
+  actor        User        @relation(fields: [actorId], references: [id])
+  action       String // e.g. intake.answer.updated, plan.approved, template.published
+  entityType   String
+  entityId     String
+  details      String? // JSON
+  createdAt    DateTime    @default(now())
+
+  @@index([transitionId])
+  @@index([entityType, entityId])
+}
