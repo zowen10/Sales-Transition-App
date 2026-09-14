@@ -1,6 +1,6 @@
 export type ComplexityLevel = 'low' | 'medium' | 'high' | 'custom';
 export type ConfidenceLevel = 'low' | 'medium' | 'high';
-export type CommercialModel = 'fixed_fee' | 'time_and_materials' | 'other';
+export type CommercialModel = 'fixed_fee' | 'time_and_materials' | 'milestone' | 'hybrid' | 'other';
 
 export interface ClassificationReason {
   field: string;

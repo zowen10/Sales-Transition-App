@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface QuestionDTO {
   id: string;
@@ -8,6 +8,8 @@ interface QuestionDTO {
   section: string;
   prompt: string;
   helpText?: string | null;
+  primaryRespondent?: string | null;
+  classificationSignal?: string | null;
   responseType: 'text' | 'number' | 'date' | 'select' | 'multiselect' | 'boolean';
   options?: string[] | null;
   required: boolean;
@@ -20,20 +22,6 @@ interface QuestionsResponse {
   confirmedKeys: string[];
   progress: { section: string; totalApplicable: number; answered: number; confirmed: number; unresolved: number }[];
 }
-
-const SECTION_ORDER = [
-  'Meeting & Attendees',
-  'Engagement Context & Objectives',
-  'Scope & Plan Classification',
-  'Systems & Integration Landscape',
-  'Risks, Constraints & Culture',
-  'Stakeholders & Team',
-  'Contract & Commercial Summary',
-  'Timeline & Milestones',
-  'Delivery Readiness',
-  'Future Opportunities',
-  'Risks and Open Questions',
-];
 
 function QuestionInput({
   question,
@@ -65,30 +53,13 @@ function QuestionInput({
       </select>
     );
   }
-  if (question.responseType === 'multiselect') {
-    const arr = Array.isArray(value) ? (value as string[]) : [];
-    return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {question.options?.map((o) => (
-          <label key={o} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, border: '1px solid var(--line)', borderRadius: 8, padding: '5px 9px' }}>
-            <input
-              type="checkbox"
-              checked={arr.includes(o)}
-              onChange={() => onChange(arr.includes(o) ? arr.filter((x) => x !== o) : [...arr, o])}
-            />
-            {o.replace(/_/g, ' ')}
-          </label>
-        ))}
-      </div>
-    );
-  }
   if (question.responseType === 'number') {
     return <input className="input" type="number" value={(value as number) ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} />;
   }
   if (question.responseType === 'date') {
     return <input className="input" type="date" value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} />;
   }
-  return <textarea className="input" rows={2} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} />;
+  return <textarea className="input" rows={3} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} style={{ resize: 'vertical' }} />;
 }
 
 function useSpeechToText(onResult: (text: string) => void) {
@@ -122,33 +93,34 @@ function useSpeechToText(onResult: (text: string) => void) {
 export default function IntakePage({ params }: { params: { id: string } }) {
   const [data, setData] = useState<QuestionsResponse | null>(null);
   const [draft, setDraft] = useState<Record<string, unknown>>({});
-  const [sectionIndex, setSectionIndex] = useState(0);
   const [saving, setSaving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [transcriptFor, setTranscriptFor] = useState<string | null>(null);
+  const [documentCount, setDocumentCount] = useState(0);
+  const [prefilling, setPrefilling] = useState(false);
+  const [prefillNote, setPrefillNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/transitions/${params.id}/questions`);
-    if (!res.ok) return;
-    const body: QuestionsResponse = await res.json();
-    setData(body);
-    setDraft((prev) => ({ ...body.answers, ...prev }));
+    const [qRes, tRes] = await Promise.all([
+      fetch(`/api/transitions/${params.id}/questions`),
+      fetch(`/api/transitions/${params.id}`),
+    ]);
+    if (qRes.ok) {
+      const body: QuestionsResponse = await qRes.json();
+      setData(body);
+      setDraft((prev) => ({ ...body.answers, ...prev }));
+    }
+    if (tRes.ok) {
+      const t = await tRes.json();
+      setDocumentCount(t.documents?.length ?? 0);
+    }
   }, [params.id]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  const sections = useMemo(() => {
-    if (!data) return [];
-    const present = new Set(data.questions.map((q) => q.section));
-    return SECTION_ORDER.filter((s) => present.has(s));
-  }, [data]);
-
-  const currentSection = sections[sectionIndex];
-  const questionsInSection = data?.questions.filter((q) => q.section === currentSection) ?? [];
-
-  async function saveAnswer(question: QuestionDTO, value: unknown, confirm: boolean, source: 'text' | 'voice' = 'text') {
+  async function saveAnswer(question: QuestionDTO, value: unknown, confirm: boolean, source: 'text' | 'voice' | 'imported' = 'text') {
     setSaving(question.key);
     setError(null);
     const res = await fetch(`/api/transitions/${params.id}/answers`, {
@@ -165,83 +137,90 @@ export default function IntakePage({ params }: { params: { id: string } }) {
     await load();
   }
 
-  const progressForSection = (section: string) => data?.progress.find((p) => p.section === section);
+  async function prepopulateFromDocuments() {
+    setPrefilling(true);
+    setPrefillNote(null);
+    setError(null);
+    const res = await fetch(`/api/transitions/${params.id}/intake/prefill`, { method: 'POST' });
+    setPrefilling(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(body.error ?? 'Failed to prepopulate from documents.');
+      return;
+    }
+    const body = await res.json();
+    setPrefillNote(body.note ?? `Filled ${body.filled} of ${data?.questions.length ?? 0} question(s) from ${body.documentsUsed} document(s). Review and confirm each before relying on it.`);
+    await load();
+  }
+
+  const totalAnswered = data ? data.progress.reduce((s, p) => s + p.answered, 0) : 0;
+  const totalConfirmed = data ? data.progress.reduce((s, p) => s + p.confirmed, 0) : 0;
+  const totalQuestions = data?.questions.length ?? 0;
+  const pct = totalQuestions ? Math.round((totalConfirmed / totalQuestions) * 100) : 0;
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', gap: 16 }}>
-      <aside className="card" style={{ padding: 12, alignSelf: 'start' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--muted)', textTransform: 'uppercase', marginBottom: 8 }}>Sections</div>
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4 }}>
-          {sections.map((s, i) => {
-            const p = progressForSection(s);
-            return (
-              <li key={s}>
-                <button
-                  onClick={() => setSectionIndex(i)}
-                  className="btn"
-                  style={{
-                    width: '100%',
-                    justifyContent: 'space-between',
-                    background: i === sectionIndex ? 'rgba(15,157,143,0.1)' : 'white',
-                    borderColor: i === sectionIndex ? 'var(--teal)' : 'var(--line)',
-                    textAlign: 'left',
-                  }}
-                >
-                  <span style={{ fontSize: 12 }}>{s}</span>
-                  <span style={{ fontSize: 10, color: p?.unresolved ? '#b42318' : 'var(--muted)' }}>
-                    {p ? `${p.confirmed}/${p.totalApplicable}` : ''}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </aside>
-
-      <div className="card" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 15, margin: '0 0 4px' }}>{currentSection ?? 'Loading…'}</h2>
-        <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 16 }}>
-          Answer by typing or using the microphone. High-impact fields must be explicitly confirmed.
+    <div style={{ maxWidth: 860, margin: '0 auto' }}>
+      <div style={{ marginBottom: 18 }}>
+        <h2 style={{ fontSize: 17, margin: '0 0 4px' }}>Sales-to-Delivery Handoff Assessment</h2>
+        <p style={{ fontSize: 12, color: 'var(--muted)', margin: '0 0 12px' }}>
+          Answer by typing or using the microphone. Each answer feeds the delivery classification — confirm high-impact
+          ones before generating the plan.
         </p>
 
-        {error && (
-          <div role="alert" style={{ color: '#b42318', fontSize: 12, marginBottom: 12 }}>
-            {error}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+          <div style={{ flex: 1, height: 8, borderRadius: 999, background: 'var(--line)', overflow: 'hidden' }}>
+            <div style={{ width: `${pct}%`, height: '100%', background: 'var(--teal)', transition: 'width .3s' }} />
+          </div>
+          <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+            {totalConfirmed}/{totalQuestions} confirmed · {totalAnswered}/{totalQuestions} answered
+          </span>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn btn-primary" onClick={prepopulateFromDocuments} disabled={prefilling}>
+            {prefilling ? 'Reading documents…' : '✨ Prepopulate from documents'}
+          </button>
+          <span style={{ fontSize: 11, color: 'var(--muted)' }}>
+            {documentCount > 0 ? `${documentCount} document(s) attached to this project` : 'No documents attached yet — add some from the project overview page'}
+          </span>
+        </div>
+        {prefillNote && (
+          <div style={{ fontSize: 12, color: 'var(--teal-dark)', background: 'rgba(15,157,143,0.08)', border: '1px solid var(--line)', borderRadius: 8, padding: '8px 12px', marginTop: 8 }}>
+            {prefillNote}
           </div>
         )}
+      </div>
 
-        <div style={{ display: 'grid', gap: 18 }}>
-          {questionsInSection.map((q) => (
-            <QuestionRow
-              key={q.key}
-              question={q}
-              value={draft[q.key]}
-              confirmed={data?.confirmedKeys.includes(q.key) ?? false}
-              saving={saving === q.key}
-              transcriptOpen={transcriptFor === q.key}
-              onOpenTranscript={() => setTranscriptFor(q.key)}
-              onCloseTranscript={() => setTranscriptFor(null)}
-              onChange={(v) => setDraft((d) => ({ ...d, [q.key]: v }))}
-              onSave={(v, confirm, source) => saveAnswer(q, v, confirm, source)}
-            />
-          ))}
-          {questionsInSection.length === 0 && <p style={{ color: 'var(--muted)', fontSize: 13 }}>No applicable questions in this section yet.</p>}
+      {error && (
+        <div role="alert" style={{ color: '#b42318', fontSize: 12, marginBottom: 12 }}>
+          {error}
         </div>
+      )}
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 24 }}>
-          <button className="btn" disabled={sectionIndex === 0} onClick={() => setSectionIndex((i) => Math.max(0, i - 1))}>
-            ← Back
-          </button>
-          <button className="btn btn-primary" disabled={sectionIndex >= sections.length - 1} onClick={() => setSectionIndex((i) => Math.min(sections.length - 1, i + 1))}>
-            Next →
-          </button>
-        </div>
+      <div style={{ display: 'grid', gap: 14 }}>
+        {data?.questions.map((q, i) => (
+          <QuestionCard
+            key={q.key}
+            index={i + 1}
+            question={q}
+            value={draft[q.key]}
+            confirmed={data.confirmedKeys.includes(q.key)}
+            saving={saving === q.key}
+            transcriptOpen={transcriptFor === q.key}
+            onOpenTranscript={() => setTranscriptFor(q.key)}
+            onCloseTranscript={() => setTranscriptFor(null)}
+            onChange={(v) => setDraft((d) => ({ ...d, [q.key]: v }))}
+            onSave={(v, confirm, source) => saveAnswer(q, v, confirm, source)}
+          />
+        ))}
+        {!data && <p style={{ color: 'var(--muted)', fontSize: 13 }}>Loading…</p>}
       </div>
     </div>
   );
 }
 
-function QuestionRow({
+function QuestionCard({
+  index,
   question,
   value,
   confirmed,
@@ -252,6 +231,7 @@ function QuestionRow({
   onChange,
   onSave,
 }: {
+  index: number;
   question: QuestionDTO;
   value: unknown;
   confirmed: boolean;
@@ -267,49 +247,90 @@ function QuestionRow({
     setTranscript(text);
     onOpenTranscript();
   });
+  const isAnswered = value !== undefined && value !== null && value !== '';
 
   return (
-    <div style={{ borderBottom: '1px solid var(--line)', paddingBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-        <label style={{ fontSize: 13, fontWeight: 700 }}>
-          {question.prompt}
-          {question.required && <span style={{ color: '#b42318' }}> *</span>}
-          {question.highImpact && <span className="badge" style={{ marginLeft: 8, fontSize: 9 }}>High impact</span>}
-        </label>
-        {supported && question.responseType === 'text' && (
-          <button type="button" className="btn" onClick={start} aria-label={`Record answer for ${question.prompt}`} style={{ fontSize: 11 }}>
-            {recording ? '● Recording…' : '🎙 Record'}
-          </button>
-        )}
-      </div>
-      {question.helpText && <p style={{ fontSize: 11, color: 'var(--muted)', margin: '4px 0' }}>{question.helpText}</p>}
+    <div
+      className="card"
+      style={{
+        padding: 18,
+        borderLeft: confirmed ? '3px solid var(--teal)' : '3px solid var(--line)',
+      }}
+    >
+      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+        <div
+          style={{
+            flexShrink: 0,
+            width: 26,
+            height: 26,
+            borderRadius: '50%',
+            background: confirmed ? 'var(--teal)' : isAnswered ? 'rgba(15,157,143,0.15)' : 'var(--bg)',
+            border: confirmed ? 'none' : '1px solid var(--line)',
+            color: confirmed ? 'white' : 'var(--muted)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 12,
+            fontWeight: 800,
+          }}
+        >
+          {confirmed ? '✓' : index}
+        </div>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
+            <label style={{ fontSize: 13.5, fontWeight: 700, lineHeight: 1.4 }}>
+              {question.prompt}
+              {question.required && <span style={{ color: '#b42318' }}> *</span>}
+            </label>
+            {supported && question.responseType === 'text' && (
+              <button type="button" className="btn" onClick={start} aria-label={`Record answer for ${question.prompt}`} style={{ fontSize: 11, flexShrink: 0 }}>
+                {recording ? '● Recording…' : '🎙 Record'}
+              </button>
+            )}
+          </div>
 
-      {transcriptOpen ? (
-        <div style={{ marginTop: 6 }}>
-          <textarea className="input" rows={2} value={transcript} onChange={(e) => setTranscript(e.target.value)} aria-label="Editable transcript" />
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
-            <button className="btn btn-primary" onClick={() => { onChange(transcript); onSave(transcript, question.highImpact, 'voice'); onCloseTranscript(); }}>
-              Use transcript
+          {(question.primaryRespondent || question.classificationSignal) && (
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 10.5, color: 'var(--muted)', margin: '4px 0 10px' }}>
+              {question.primaryRespondent && (
+                <span>
+                  👤 <strong style={{ color: 'var(--ink)', fontWeight: 600 }}>{question.primaryRespondent}</strong>
+                </span>
+              )}
+              {question.classificationSignal && (
+                <span>
+                  🎯 {question.classificationSignal}
+                </span>
+              )}
+            </div>
+          )}
+          {question.helpText && <p style={{ fontSize: 11, color: 'var(--muted)', margin: '0 0 8px' }}>{question.helpText}</p>}
+
+          {transcriptOpen ? (
+            <div>
+              <textarea className="input" rows={3} value={transcript} onChange={(e) => setTranscript(e.target.value)} aria-label="Editable transcript" />
+              <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                <button className="btn btn-primary" onClick={() => { onChange(transcript); onSave(transcript, question.highImpact, 'voice'); onCloseTranscript(); }}>
+                  Use transcript
+                </button>
+                <button className="btn" onClick={onCloseTranscript}>
+                  Discard
+                </button>
+              </div>
+            </div>
+          ) : (
+            <QuestionInput question={question} value={value} onChange={onChange} />
+          )}
+
+          <div style={{ display: 'flex', gap: 8, marginTop: 10, alignItems: 'center' }}>
+            <button className="btn" disabled={saving} onClick={() => onSave(value, false)}>
+              Save
             </button>
-            <button className="btn" onClick={onCloseTranscript}>
-              Discard
+            <button className="btn btn-primary" disabled={saving} onClick={() => onSave(value, true)}>
+              {confirmed ? '✓ Confirmed' : 'Confirm'}
             </button>
+            {question.highImpact && !confirmed && <span className="badge" style={{ fontSize: 9 }}>High impact — confirm before submitting</span>}
           </div>
         </div>
-      ) : (
-        <div style={{ marginTop: 6 }}>
-          <QuestionInput question={question} value={value} onChange={onChange} />
-        </div>
-      )}
-
-      <div style={{ display: 'flex', gap: 8, marginTop: 8, alignItems: 'center' }}>
-        <button className="btn" disabled={saving} onClick={() => onSave(value, false)}>
-          Save
-        </button>
-        <button className="btn btn-primary" disabled={saving} onClick={() => onSave(value, true)}>
-          {confirmed ? '✓ Confirmed' : 'Confirm'}
-        </button>
-        {confirmed && <span style={{ fontSize: 11, color: 'var(--teal-dark)' }}>Confirmed</span>}
       </div>
     </div>
   );

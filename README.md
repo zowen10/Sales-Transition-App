@@ -69,6 +69,10 @@ See `.env.example`. Notable ones:
   logs events to the console instead of calling a real Flow Builder endpoint.
 - `RETAIN_RAW_AUDIO` — `false` by default; raw transcripts are never persisted unless this is
   explicitly set to `true`.
+- `ANTHROPIC_API_KEY` / `ANTHROPIC_MODEL` — when set, the intake screen's "Prepopulate from
+  documents" button reads uploaded `.txt`/`.docx` files and asks Claude to suggest answers
+  (saved unconfirmed, source `imported`). Unset by default — the button then explains that
+  extraction isn't configured rather than silently doing nothing.
 
 ## Commands
 
@@ -126,11 +130,19 @@ tests/integration/                Integration tests against a real migrated SQLi
   acting user is recorded on the decision.
 - **Plan type** is Single site or Multi-site only.
 - **Documents**: a project can have local file uploads and SharePoint links attached
-  (`ProjectDocument`, stored under `project-documents/`, gitignored). They're stored and
-  shown for reference only — nothing is auto-extracted into intake answers yet, and
-  nothing crawls the linked SharePoint folder (no Graph API credentials are configured).
-- **Intake question set** is modeled on Manhattan Associates' Sales Cycle / Sales
-  Transition handoff meeting document — see the `QUESTIONS` array in `prisma/seed.ts`.
+  (`ProjectDocument`, stored under `project-documents/`, gitignored). Nothing crawls the
+  linked SharePoint folder (no Graph API credentials are configured) — only uploaded files
+  are readable. "Prepopulate from documents" on the intake screen reads uploaded
+  `.txt`/`.docx` files (PDF and other formats aren't parsed yet) and, when
+  `ANTHROPIC_API_KEY` is set, asks Claude to suggest answers strictly from that text —
+  saved as unconfirmed/editable answers, never auto-confirmed. Without a key configured,
+  it's a safe no-op with an explanatory note.
+- **Intake question set** is the 13-question sales-to-delivery handoff assessment (one
+  flat list, no sub-sections to click through) — see the `QUESTIONS` array in
+  `prisma/seed.ts`. Two of its keys (`scope.products`, `commercial.model`) still feed the
+  deterministic classification engine directly; the rest are narrative and don't currently
+  drive `classifyTransition` — that engine still runs and is still deterministic, it just
+  has fewer structured signals to work with than before.
 
 ## Domain model
 

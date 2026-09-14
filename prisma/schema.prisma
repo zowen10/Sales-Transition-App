@@ -113,6 +113,8 @@ model QuestionDefinition {
   helpText       String?
   responseType   String // text | number | date | select | multiselect | boolean
   options        String? // JSON string[] for select/multiselect
+  primaryRespondent   String? // e.g. "Sales", "ED", "Sales + Technical Lead" — display only
+  classificationSignal String? // what this answer is used to determine — display only
   required       Boolean  @default(false)
   order          Int
   visibilityRule String? // JSON-encoded rule evaluated against prior answers

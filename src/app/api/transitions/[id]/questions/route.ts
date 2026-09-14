@@ -33,8 +33,15 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     const applicable = getApplicableQuestions(questions, answers);
     const progress = computeIntakeProgress(questions, answers, confirmedKeys);
 
+    const byKey = new Map(dbQuestions.map((q) => [q.key, q]));
+    const questionsWithMeta = applicable.map((q) => ({
+      ...q,
+      primaryRespondent: byKey.get(q.key)?.primaryRespondent ?? null,
+      classificationSignal: byKey.get(q.key)?.classificationSignal ?? null,
+    }));
+
     return NextResponse.json({
-      questions: applicable,
+      questions: questionsWithMeta,
       answers,
       confirmedKeys: Array.from(confirmedKeys),
       progress,

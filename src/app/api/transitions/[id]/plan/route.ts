@@ -91,19 +91,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         })),
       });
 
-      const assumptionTexts = splitFreeText(answers['risks.unvalidated_assumptions']);
+      // Sourced from the handoff assessment's narrative questions: scope boundary
+      // exclusions become assumptions, risks/concerns become risks, and the
+      // template recommendation's disqualifying facts become an open decision.
+      const assumptionTexts = splitFreeText(answers['handoff.scope_boundary']);
       if (assumptionTexts.length) {
         await tx.assumption.createMany({
           data: assumptionTexts.map((description) => ({ planVersionId: pv.id, description, source: 'intake' })),
         });
       }
-      const riskTexts = splitFreeText(answers['risks.known_risks']);
+      const riskTexts = splitFreeText(answers['handoff.risks_concerns']);
       if (riskTexts.length) {
         await tx.risk.createMany({
           data: riskTexts.map((description) => ({ planVersionId: pv.id, description, source: 'intake' })),
         });
       }
-      const decisionTexts = splitFreeText(answers['risks.decisions_required']);
+      const decisionTexts = splitFreeText(answers['handoff.template_recommendation']);
       if (decisionTexts.length) {
         await tx.decision.createMany({
           data: decisionTexts.map((description) => ({ planVersionId: pv.id, description, source: 'intake' })),
