@@ -42,6 +42,25 @@ Seeded accounts (password `password123` for all — **local dev only**):
 | `admin@example.com` | Administrator |
 | `pat.sales@example.com` | Contributor (Sales Lead) |
 
+### Pulling later updates
+
+Whenever you `git pull` after the initial setup, run these in order:
+
+```bash
+git pull origin claude/zen-clarke-wli5xj
+npm install                 # picks up any new dependencies
+npx prisma migrate deploy   # applies new migration SQL to dev.db
+npx prisma generate         # regenerates the Prisma Client — do NOT skip this
+npm run prisma:seed
+npm run dev
+```
+
+`npx prisma generate` is easy to forget because `npm run dev` will start successfully
+without it — but any schema change (a new field, a new model) will fail at runtime with
+an error like `Unknown argument 'someNewField'` until the client is regenerated. If you
+ever see a `PrismaClientValidationError` mentioning a field that should exist, this is
+almost always the fix.
+
 ### If a schema/migration pull breaks your local database
 
 `prisma/dev.db` is a disposable local file, not a shared/production database. While this
