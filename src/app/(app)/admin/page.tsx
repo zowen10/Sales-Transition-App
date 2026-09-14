@@ -32,7 +32,7 @@ export default async function AdminPage() {
           <div style={{ fontSize: 20, fontWeight: 800 }}>{userCount}</div>
         </div>
         <div className="card" style={{ padding: 14 }}>
-          <div style={{ fontSize: 10, color: 'var(--muted)' }}>Transitions</div>
+          <div style={{ fontSize: 10, color: 'var(--muted)' }}>Projects</div>
           <div style={{ fontSize: 20, fontWeight: 800 }}>{transitionCount}</div>
         </div>
         <div className="card" style={{ padding: 14 }}>

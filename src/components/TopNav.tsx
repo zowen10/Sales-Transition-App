@@ -6,8 +6,8 @@ import { signOut } from 'next-auth/react';
 import type { CurrentUser } from '@/lib/session';
 
 const LINKS = [
-  { href: '/transitions', label: 'My Transitions' },
-  { href: '/transitions/new', label: 'New Transition' },
+  { href: '/transitions', label: 'Projects' },
+  { href: '/transitions/new', label: 'New Project' },
   { href: '/templates', label: 'Templates' },
   { href: '/approvals', label: 'Approvals' },
 ];
@@ -17,10 +17,10 @@ export function TopNav({ user }: { user: CurrentUser }) {
   const isAdmin = user.roles.includes('ADMINISTRATOR');
 
   return (
-    <header style={{ borderBottom: '1px solid var(--line)', background: 'white' }}>
+    <header style={{ borderBottom: '1px solid var(--header-line)', background: 'var(--header-bg)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 24 }}>
-        <div style={{ fontWeight: 800, fontSize: 14 }}>
-          Sales Transition App <span style={{ color: 'var(--muted)', fontWeight: 500 }}>· Flow Builder</span>
+        <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--header-ink)' }}>
+          Sales Transition <span style={{ color: 'var(--header-muted)', fontWeight: 500 }}>· Flow Builder</span>
         </div>
         <nav style={{ display: 'flex', gap: 4, flex: 1 }} aria-label="Primary">
           {LINKS.concat(isAdmin ? [{ href: '/admin', label: 'Administration' }] : []).map((l) => {
@@ -35,8 +35,8 @@ export function TopNav({ user }: { user: CurrentUser }) {
                   borderRadius: 8,
                   fontSize: 13,
                   fontWeight: 700,
-                  color: active ? 'var(--teal-dark)' : 'var(--muted)',
-                  background: active ? 'rgba(15,157,143,0.1)' : 'transparent',
+                  color: active ? '#0a1017' : 'var(--header-muted)',
+                  background: active ? 'var(--teal)' : 'transparent',
                 }}
               >
                 {l.label}
@@ -44,9 +44,21 @@ export function TopNav({ user }: { user: CurrentUser }) {
             );
           })}
         </nav>
-        <div style={{ fontSize: 12, color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ fontSize: 12, color: 'var(--header-muted)', display: 'flex', alignItems: 'center', gap: 10 }}>
           <span>{user.name}</span>
-          <button className="btn" onClick={() => signOut({ callbackUrl: '/login' })}>
+          <button
+            onClick={() => signOut({ callbackUrl: '/login' })}
+            style={{
+              border: '1px solid var(--header-line)',
+              background: 'transparent',
+              color: 'var(--header-ink)',
+              borderRadius: 8,
+              padding: '6px 12px',
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
             Sign out
           </button>
         </div>

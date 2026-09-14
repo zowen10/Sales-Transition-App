@@ -10,6 +10,10 @@
   --muted: #5b7480;
   --teal: #0f9d8f;
   --teal-dark: #0b7d72;
+  --header-bg: #16242f;
+  --header-line: #263b48;
+  --header-ink: #f2f7f8;
+  --header-muted: #93a9b4;
 }
 
 body {

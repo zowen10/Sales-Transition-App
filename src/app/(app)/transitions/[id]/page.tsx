@@ -31,7 +31,7 @@ export default async function TransitionOverviewPage({ params }: { params: { id:
           <dd>{transition.planType.replace('_', ' ')}</dd>
           <dt style={{ color: 'var(--muted)' }}>Products in scope</dt>
           <dd>{products.join(', ') || '—'}</dd>
-          <dt style={{ color: 'var(--muted)' }}>Transition owner</dt>
+          <dt style={{ color: 'var(--muted)' }}>Project owner</dt>
           <dd>{transition.transitionOwner.name}</dd>
           <dt style={{ color: 'var(--muted)' }}>Sales lead</dt>
           <dd>{transition.salesLead?.name ?? '—'}</dd>

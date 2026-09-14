@@ -75,7 +75,7 @@ export default function NewTransitionPage() {
 
   return (
     <div style={{ maxWidth: 640 }}>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>New Sales Transition</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>New Project</h1>
       <p style={{ color: 'var(--muted)', fontSize: 13, marginBottom: 20 }}>
         Capture the opportunity handoff details. You&apos;ll complete the guided intake interview next.
       </p>
@@ -86,7 +86,7 @@ export default function NewTransitionPage() {
           <input className="input" required value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} />
         </div>
         <div>
-          <label className="field-label">Transition name</label>
+          <label className="field-label">Project name</label>
           <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Distribution — Phase 1 WM Rollout" />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -113,7 +113,7 @@ export default function NewTransitionPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           <div>
-            <label className="field-label">Transition owner</label>
+            <label className="field-label">Project owner</label>
             <select className="input" required value={form.transitionOwnerId} onChange={(e) => setForm({ ...form, transitionOwnerId: e.target.value })}>
               <option value="">Select…</option>
               {users.map((u) => (
@@ -169,7 +169,7 @@ export default function NewTransitionPage() {
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
-            {submitting ? 'Creating…' : 'Create transition'}
+            {submitting ? 'Creating…' : 'Create project'}
           </button>
         </div>
       </form>

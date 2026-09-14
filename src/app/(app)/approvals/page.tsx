@@ -26,7 +26,7 @@ export default async function ApprovalsPage() {
           <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 11, textTransform: 'uppercase' }}>
-                <th style={{ padding: '10px 16px' }}>Transition</th>
+                <th style={{ padding: '10px 16px' }}>Project</th>
                 <th style={{ padding: '10px 16px' }}>Client</th>
                 <th style={{ padding: '10px 16px' }}>Plan version</th>
                 <th style={{ padding: '10px 16px' }}>Requested</th>

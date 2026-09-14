@@ -3,7 +3,7 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'Sales Transition App | Flow Builder',
+  title: 'Sales Transition | Flow Builder',
   description: 'Guide an Engagement Director from opportunity handoff to an approved delivery plan.',
 };
 
