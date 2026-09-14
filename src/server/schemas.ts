@@ -3,12 +3,12 @@ import { ANSWER_SOURCES, ARTIFACT_TYPES, PLAN_TYPES } from '@/lib/enums';
 
 export const createTransitionSchema = z.object({
   clientName: z.string().min(1),
-  opportunityId: z.string().optional(),
+  salesforceOpportunityUrl: z.string().optional(),
   name: z.string().min(1),
-  transitionOwnerId: z.string().min(1),
-  salesLeadId: z.string().optional(),
-  executiveSponsorId: z.string().optional(),
-  expectedDecisionDate: z.string().optional(),
+  engagementDirectorName: z.string().min(1),
+  salesLeadName: z.string().optional(),
+  executiveSponsorName: z.string().optional(),
+  salesTransitionFolderUrl: z.string().optional(),
   planType: z.enum(PLAN_TYPES),
   productsInScope: z.array(z.string()).default([]),
 });
@@ -64,4 +64,9 @@ export const templateCreateSchema = z.object({
 
 export const templateTransitionSchema = z.object({
   to: z.enum(['DRAFT', 'REVIEW', 'PUBLISHED', 'RETIRED']),
+});
+
+export const linkSharepointDocumentSchema = z.object({
+  sharepointUrl: z.string().min(1),
+  filename: z.string().min(1),
 });

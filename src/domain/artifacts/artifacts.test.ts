@@ -18,7 +18,7 @@ function baseContext(status: 'Draft' | 'Approved'): ArtifactContext {
     },
     transition: {
       clientName: 'Acme Distribution',
-      opportunityId: 'OPP-1',
+      salesforceOpportunityUrl: 'https://manh.lightning.force.com/lightning/r/Opportunity/OPP-1/view',
       planType: 'SINGLE_SITE',
       productsInScope: ['wm'],
       ownerName: 'Alex Rivera',

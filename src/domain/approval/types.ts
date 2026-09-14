@@ -3,7 +3,8 @@ export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQU
 export interface ApprovalRecord {
   id: string;
   planVersionId: string;
-  approverId: string;
+  /** Unset until someone actually acts on the request — access is enforced by role, not a pre-bound login. */
+  approverId?: string | null;
   approverRole: string;
   status: ApprovalStatus;
   comment?: string;

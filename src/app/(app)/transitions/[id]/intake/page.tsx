@@ -22,13 +22,17 @@ interface QuestionsResponse {
 }
 
 const SECTION_ORDER = [
-  'Engagement context',
-  'Scope and plan classification',
-  'Complexity drivers',
-  'Timeline and milestones',
-  'Delivery readiness',
-  'Commercial assumptions',
-  'Risks and open questions',
+  'Meeting & Attendees',
+  'Engagement Context & Objectives',
+  'Scope & Plan Classification',
+  'Systems & Integration Landscape',
+  'Risks, Constraints & Culture',
+  'Stakeholders & Team',
+  'Contract & Commercial Summary',
+  'Timeline & Milestones',
+  'Delivery Readiness',
+  'Future Opportunities',
+  'Risks and Open Questions',
 ];
 
 function QuestionInput({

@@ -1,20 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-
-interface UserOption {
-  id: string;
-  name: string;
-  email: string;
-  roles: string[];
-}
 
 const PLAN_TYPES = [
   { value: 'SINGLE_SITE', label: 'Single site' },
   { value: 'MULTI_SITE', label: 'Multi-site' },
-  { value: 'PROGRAM', label: 'Program' },
-  { value: 'SPECIALIZED', label: 'Specialized' },
 ];
 
 const PRODUCTS = [
@@ -28,48 +19,61 @@ const PRODUCTS = [
 
 export default function NewTransitionPage() {
   const router = useRouter();
-  const [users, setUsers] = useState<UserOption[]>([]);
   const [form, setForm] = useState({
     clientName: '',
-    opportunityId: '',
     name: '',
-    transitionOwnerId: '',
-    salesLeadId: '',
-    executiveSponsorId: '',
-    expectedDecisionDate: '',
+    salesforceOpportunityUrl: '',
+    salesTransitionFolderUrl: '',
     planType: 'SINGLE_SITE',
+    engagementDirectorName: '',
+    salesLeadName: '',
+    executiveSponsorName: '',
   });
   const [products, setProducts] = useState<string[]>([]);
+  const [files, setFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetch('/api/users')
-      .then((r) => r.json())
-      .then(setUsers)
-      .catch(() => setUsers([]));
-  }, []);
-
   function toggleProduct(id: string) {
     setProducts((prev) => (prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]));
+  }
+
+  function onFilesSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const selected = e.target.files;
+    if (!selected) return;
+    setFiles((prev) => [...prev, ...Array.from(selected)]);
+    e.target.value = '';
+  }
+
+  function removeFile(name: string) {
+    setFiles((prev) => prev.filter((f) => f.name !== name));
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+
     const res = await fetch('/api/transitions', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ ...form, productsInScope: products }),
     });
-    setSubmitting(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? 'Failed to create transition.');
+      setError(body.error ?? 'Failed to create project.');
+      setSubmitting(false);
       return;
     }
     const created = await res.json();
+
+    // Upload any locally-selected documents against the newly created project.
+    for (const file of files) {
+      const uploadForm = new FormData();
+      uploadForm.append('file', file);
+      await fetch(`/api/transitions/${created.id}/documents/upload`, { method: 'POST', body: uploadForm });
+    }
+
     router.push(`/transitions/${created.id}`);
   }
 
@@ -89,15 +93,52 @@ export default function NewTransitionPage() {
           <label className="field-label">Project name</label>
           <input className="input" required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Acme Distribution — Phase 1 WM Rollout" />
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label className="field-label">Opportunity / CRM ID</label>
-            <input className="input" value={form.opportunityId} onChange={(e) => setForm({ ...form, opportunityId: e.target.value })} />
-          </div>
-          <div>
-            <label className="field-label">Expected decision date</label>
-            <input className="input" type="date" value={form.expectedDecisionDate} onChange={(e) => setForm({ ...form, expectedDecisionDate: e.target.value })} />
-          </div>
+
+        <div>
+          <label className="field-label">Salesforce opportunity URL</label>
+          <input
+            className="input"
+            type="url"
+            placeholder="https://manh.lightning.force.com/lightning/r/Opportunity/…"
+            value={form.salesforceOpportunityUrl}
+            onChange={(e) => setForm({ ...form, salesforceOpportunityUrl: e.target.value })}
+          />
+        </div>
+
+        <div>
+          <label className="field-label">Sales transition SharePoint folder</label>
+          <input
+            className="input"
+            type="url"
+            placeholder="https://manh.sharepoint.com/sites/…"
+            value={form.salesTransitionFolderUrl}
+            onChange={(e) => setForm({ ...form, salesTransitionFolderUrl: e.target.value })}
+          />
+          <p style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>
+            Saved as a reference link. Individual documents from this folder can be linked or uploaded below, or added
+            later from the project page.
+          </p>
+        </div>
+
+        <div>
+          <label className="field-label">Local documents</label>
+          <label className="btn" style={{ cursor: 'pointer', width: 'fit-content' }}>
+            + Add files
+            <input type="file" multiple onChange={onFilesSelected} style={{ display: 'none' }} />
+          </label>
+          {files.length > 0 && (
+            <ul style={{ listStyle: 'none', margin: '8px 0 0', padding: 0, display: 'grid', gap: 4 }}>
+              {files.map((f) => (
+                <li key={f.name} style={{ fontSize: 12, display: 'flex', justifyContent: 'space-between', border: '1px solid var(--line)', borderRadius: 6, padding: '4px 8px' }}>
+                  <span>{f.name}</span>
+                  <button type="button" onClick={() => removeFile(f.name)} style={{ background: 'none', border: 'none', color: '#b42318', cursor: 'pointer' }}>
+                    Remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p style={{ fontSize: 10, color: 'var(--muted)', marginTop: 4 }}>Uploaded once the project is created below.</p>
         </div>
 
         <div>
@@ -113,39 +154,16 @@ export default function NewTransitionPage() {
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           <div>
-            <label className="field-label">Project owner</label>
-            <select className="input" required value={form.transitionOwnerId} onChange={(e) => setForm({ ...form, transitionOwnerId: e.target.value })}>
-              <option value="">Select…</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+            <label className="field-label">Engagement Director</label>
+            <input className="input" required value={form.engagementDirectorName} onChange={(e) => setForm({ ...form, engagementDirectorName: e.target.value })} placeholder="Type a name" />
           </div>
           <div>
             <label className="field-label">Sales lead</label>
-            <select className="input" value={form.salesLeadId} onChange={(e) => setForm({ ...form, salesLeadId: e.target.value })}>
-              <option value="">Select…</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
+            <input className="input" value={form.salesLeadName} onChange={(e) => setForm({ ...form, salesLeadName: e.target.value })} placeholder="Type a name" />
           </div>
           <div>
             <label className="field-label">Executive sponsor</label>
-            <select className="input" value={form.executiveSponsorId} onChange={(e) => setForm({ ...form, executiveSponsorId: e.target.value })}>
-              <option value="">Select…</option>
-              {users
-                .filter((u) => u.roles.includes('EXECUTIVE_APPROVER'))
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-            </select>
+            <input className="input" value={form.executiveSponsorName} onChange={(e) => setForm({ ...form, executiveSponsorName: e.target.value })} placeholder="Type a name" />
           </div>
         </div>
 

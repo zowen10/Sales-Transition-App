@@ -12,7 +12,6 @@ export interface ClassificationRules {
     siteCountMediumThreshold: number;
     siteCountHighThreshold: number;
     multiSitePoints: number;
-    programPoints: number;
     perIntegrationPoints: number;
     perSitePoints: number;
     mifPoints: number;
@@ -35,7 +34,6 @@ export const DEFAULT_CLASSIFICATION_RULES: ClassificationRules = {
     siteCountMediumThreshold: 3,
     siteCountHighThreshold: 8,
     multiSitePoints: 2,
-    programPoints: 4,
     perIntegrationPoints: 1.5,
     perSitePoints: 0.5,
     mifPoints: 2,

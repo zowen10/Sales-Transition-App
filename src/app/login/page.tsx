@@ -31,7 +31,7 @@ export default function LoginPage() {
         <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', color: 'var(--teal)', textTransform: 'uppercase' }}>
           Manhattan Associates · Flow Builder
         </div>
-        <h1 style={{ fontSize: 22, margin: '8px 0 20px' }}>Sales Transition</h1>
+        <h1 style={{ fontSize: 22, margin: '8px 0 20px' }}>Handoff</h1>
 
         <label htmlFor="email" style={{ display: 'block', fontSize: 12, marginBottom: 4, color: 'var(--muted)' }}>
           Email

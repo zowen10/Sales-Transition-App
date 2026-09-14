@@ -1,7 +1,8 @@
-# Sales Transition App
+# Handoff
 
-A Flow Builder application that takes an Engagement Director from opportunity handoff to
-an approved delivery plan: guided intake → deterministic classification → deterministic
+A Flow Builder application ("Handoff") that takes an Engagement Director from opportunity
+handoff to an approved delivery plan: guided intake (modeled on Manhattan Associates'
+Sales Transition meeting document) → deterministic classification → deterministic
 estimation (ported from the Burn Plan Calculator reference prototype) → scenario
 comparison → approval workflow → kickoff/pre-kickoff artifact generation.
 
@@ -99,6 +100,21 @@ src/app/api/                      REST-ish API routes (the service boundary)
 src/app/(app)/                    Authenticated UI: transitions, templates, approvals, admin
 tests/integration/                Integration tests against a real migrated SQLite DB
 ```
+
+## Notes on the current model
+
+- **Engagement Director / Sales Lead / Executive Sponsor** are free-text names on a
+  project, not tied to a login — login/approval access is managed at the Flow Builder
+  level, not per-field here. Approval requests are role-based, not bound to a specific
+  account: any signed-in user with approval access can act on a pending request, and the
+  acting user is recorded on the decision.
+- **Plan type** is Single site or Multi-site only.
+- **Documents**: a project can have local file uploads and SharePoint links attached
+  (`ProjectDocument`, stored under `project-documents/`, gitignored). They're stored and
+  shown for reference only — nothing is auto-extracted into intake answers yet, and
+  nothing crawls the linked SharePoint folder (no Graph API credentials are configured).
+- **Intake question set** is modeled on Manhattan Associates' Sales Cycle / Sales
+  Transition handoff meeting document — see the `QUESTIONS` array in `prisma/seed.ts`.
 
 ## Domain model
 

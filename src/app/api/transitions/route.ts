@@ -12,8 +12,6 @@ export async function GET() {
     const transitions = await db.transition.findMany({
       include: {
         client: true,
-        transitionOwner: { select: { id: true, name: true } },
-        executiveSponsor: { select: { id: true, name: true } },
         planVersions: { select: { id: true, status: true, versionNumber: true, recommended: true } },
       },
       orderBy: { updatedAt: 'desc' },
@@ -23,11 +21,11 @@ export async function GET() {
         id: t.id,
         name: t.name,
         clientName: t.client.name,
-        opportunityId: t.opportunityId,
+        salesforceOpportunityUrl: t.salesforceOpportunityUrl,
         planType: t.planType,
         status: t.status,
-        ownerName: t.transitionOwner.name,
-        sponsorName: t.executiveSponsor?.name ?? null,
+        ownerName: t.engagementDirectorName,
+        sponsorName: t.executiveSponsorName,
         planVersionCount: t.planVersions.length,
         currentPlanVersionId: t.currentPlanVersionId,
         updatedAt: t.updatedAt,
@@ -47,11 +45,11 @@ export async function POST(req: Request) {
     let client = await db.client.findFirst({ where: { name: body.clientName } });
     if (!client) client = await db.client.create({ data: { name: body.clientName } });
 
-    if (body.opportunityId) {
-      const duplicate = await db.transition.findFirst({ where: { opportunityId: body.opportunityId } });
+    if (body.salesforceOpportunityUrl) {
+      const duplicate = await db.transition.findFirst({ where: { salesforceOpportunityUrl: body.salesforceOpportunityUrl } });
       if (duplicate) {
         return NextResponse.json(
-          { error: `A transition already exists for opportunity ${body.opportunityId}: "${duplicate.name}".`, duplicateTransitionId: duplicate.id },
+          { error: `A project already exists for this Salesforce opportunity: "${duplicate.name}".`, duplicateTransitionId: duplicate.id },
           { status: 409 }
         );
       }
@@ -60,12 +58,12 @@ export async function POST(req: Request) {
     const transition = await db.transition.create({
       data: {
         clientId: client.id,
-        opportunityId: body.opportunityId,
+        salesforceOpportunityUrl: body.salesforceOpportunityUrl,
         name: body.name,
-        transitionOwnerId: body.transitionOwnerId,
-        salesLeadId: body.salesLeadId,
-        executiveSponsorId: body.executiveSponsorId,
-        expectedDecisionDate: body.expectedDecisionDate ? new Date(body.expectedDecisionDate) : null,
+        engagementDirectorName: body.engagementDirectorName,
+        salesLeadName: body.salesLeadName,
+        executiveSponsorName: body.executiveSponsorName,
+        salesTransitionFolderUrl: body.salesTransitionFolderUrl,
         planType: body.planType,
         status: 'DRAFT',
         productsInScope: JSON.stringify(body.productsInScope),

@@ -1,15 +1,14 @@
 import Link from 'next/link';
 import { db } from '@/lib/db';
+import { DocumentsPanel } from '@/components/DocumentsPanel';
 
 export default async function TransitionOverviewPage({ params }: { params: { id: string } }) {
   const transition = await db.transition.findUnique({
     where: { id: params.id },
     include: {
       client: true,
-      transitionOwner: true,
-      salesLead: true,
-      executiveSponsor: true,
       classification: true,
+      documents: { orderBy: { uploadedAt: 'desc' }, include: { uploadedBy: { select: { name: true } } } },
       planVersions: { orderBy: { versionNumber: 'desc' } },
     },
   });
@@ -20,35 +19,58 @@ export default async function TransitionOverviewPage({ params }: { params: { id:
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16 }}>
-      <div className="card" style={{ padding: 20 }}>
-        <h2 style={{ fontSize: 14, margin: '0 0 12px' }}>Engagement summary</h2>
-        <dl style={{ display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: 8, fontSize: 13 }}>
-          <dt style={{ color: 'var(--muted)' }}>Client</dt>
-          <dd>{transition.client.name}</dd>
-          <dt style={{ color: 'var(--muted)' }}>Opportunity</dt>
-          <dd>{transition.opportunityId ?? '—'}</dd>
-          <dt style={{ color: 'var(--muted)' }}>Plan type</dt>
-          <dd>{transition.planType.replace('_', ' ')}</dd>
-          <dt style={{ color: 'var(--muted)' }}>Products in scope</dt>
-          <dd>{products.join(', ') || '—'}</dd>
-          <dt style={{ color: 'var(--muted)' }}>Project owner</dt>
-          <dd>{transition.transitionOwner.name}</dd>
-          <dt style={{ color: 'var(--muted)' }}>Sales lead</dt>
-          <dd>{transition.salesLead?.name ?? '—'}</dd>
-          <dt style={{ color: 'var(--muted)' }}>Executive sponsor</dt>
-          <dd>{transition.executiveSponsor?.name ?? '—'}</dd>
-        </dl>
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div className="card" style={{ padding: 20 }}>
+          <h2 style={{ fontSize: 14, margin: '0 0 12px' }}>Engagement summary</h2>
+          <dl style={{ display: 'grid', gridTemplateColumns: '160px 1fr', rowGap: 8, fontSize: 13 }}>
+            <dt style={{ color: 'var(--muted)' }}>Client</dt>
+            <dd>{transition.client.name}</dd>
+            <dt style={{ color: 'var(--muted)' }}>Salesforce opportunity</dt>
+            <dd>
+              {transition.salesforceOpportunityUrl ? (
+                <a href={transition.salesforceOpportunityUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--teal-dark)' }}>
+                  {transition.salesforceOpportunityUrl}
+                </a>
+              ) : (
+                '—'
+              )}
+            </dd>
+            <dt style={{ color: 'var(--muted)' }}>Plan type</dt>
+            <dd>{transition.planType.replace('_', ' ')}</dd>
+            <dt style={{ color: 'var(--muted)' }}>Products in scope</dt>
+            <dd>{products.join(', ') || '—'}</dd>
+            <dt style={{ color: 'var(--muted)' }}>Engagement Director</dt>
+            <dd>{transition.engagementDirectorName}</dd>
+            <dt style={{ color: 'var(--muted)' }}>Sales lead</dt>
+            <dd>{transition.salesLeadName ?? '—'}</dd>
+            <dt style={{ color: 'var(--muted)' }}>Executive sponsor</dt>
+            <dd>{transition.executiveSponsorName ?? '—'}</dd>
+          </dl>
 
-        <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
-          <Link href={`/transitions/${transition.id}/intake`} className="btn btn-primary">
-            Continue intake
-          </Link>
-          {currentPlan && (
-            <Link href={`/transitions/${transition.id}/estimate`} className="btn">
-              View estimate
+          <div style={{ marginTop: 20, display: 'flex', gap: 8 }}>
+            <Link href={`/transitions/${transition.id}/intake`} className="btn btn-primary">
+              Continue intake
             </Link>
-          )}
+            {currentPlan && (
+              <Link href={`/transitions/${transition.id}/estimate`} className="btn">
+                View estimate
+              </Link>
+            )}
+          </div>
         </div>
+
+        <DocumentsPanel
+          transitionId={transition.id}
+          sharepointFolderUrl={transition.salesTransitionFolderUrl}
+          initialDocuments={transition.documents.map((d) => ({
+            id: d.id,
+            source: d.source as 'upload' | 'sharepoint_link',
+            filename: d.filename,
+            sharepointUrl: d.sharepointUrl,
+            uploadedByName: d.uploadedBy.name,
+            uploadedAt: d.uploadedAt.toISOString(),
+          }))}
+        />
       </div>
 
       <div className="card" style={{ padding: 20 }}>

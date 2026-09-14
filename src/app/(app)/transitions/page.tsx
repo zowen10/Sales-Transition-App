@@ -14,7 +14,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export default async function TransitionsPage() {
   const transitions = await db.transition.findMany({
-    include: { client: true, transitionOwner: true, executiveSponsor: true },
+    include: { client: true },
     orderBy: { updatedAt: 'desc' },
   });
 
@@ -45,7 +45,7 @@ export default async function TransitionsPage() {
                 <th style={{ padding: '10px 16px' }}>Project</th>
                 <th style={{ padding: '10px 16px' }}>Client</th>
                 <th style={{ padding: '10px 16px' }}>Plan type</th>
-                <th style={{ padding: '10px 16px' }}>Owner</th>
+                <th style={{ padding: '10px 16px' }}>Engagement Director</th>
                 <th style={{ padding: '10px 16px' }}>Sponsor</th>
                 <th style={{ padding: '10px 16px' }}>Status</th>
               </tr>
@@ -60,8 +60,8 @@ export default async function TransitionsPage() {
                   </td>
                   <td style={{ padding: '12px 16px' }}>{t.client.name}</td>
                   <td style={{ padding: '12px 16px' }}>{t.planType.replace('_', ' ')}</td>
-                  <td style={{ padding: '12px 16px' }}>{t.transitionOwner.name}</td>
-                  <td style={{ padding: '12px 16px' }}>{t.executiveSponsor?.name ?? '—'}</td>
+                  <td style={{ padding: '12px 16px' }}>{t.engagementDirectorName}</td>
+                  <td style={{ padding: '12px 16px' }}>{t.executiveSponsorName ?? '—'}</td>
                   <td style={{ padding: '12px 16px' }}>
                     <span className="badge" style={{ color: STATUS_COLORS[t.status], borderColor: STATUS_COLORS[t.status] }}>
                       {t.status.replace(/_/g, ' ')}

@@ -24,7 +24,7 @@ export interface ArtifactContext {
   metadata: ArtifactMetadata;
   transition: {
     clientName: string;
-    opportunityId: string | null;
+    salesforceOpportunityUrl: string | null;
     planType: string;
     productsInScope: string[];
     ownerName: string;

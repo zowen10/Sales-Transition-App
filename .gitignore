@@ -12,6 +12,7 @@ prisma/test.db
 prisma/test.db-journal
 coverage/
 artifact-storage/
+project-documents/
 .DS_Store
 next-env.d.ts
 tsconfig.tsbuildinfo

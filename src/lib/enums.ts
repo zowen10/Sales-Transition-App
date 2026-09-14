@@ -26,7 +26,7 @@ export const TRANSITION_STATUSES = [
   'ARCHIVED',
 ] as const;
 
-export const PLAN_TYPES = ['SINGLE_SITE', 'MULTI_SITE', 'PROGRAM', 'SPECIALIZED'] as const;
+export const PLAN_TYPES = ['SINGLE_SITE', 'MULTI_SITE'] as const;
 
 export const TEMPLATE_TYPES = [
   'PLAN_TEMPLATE',

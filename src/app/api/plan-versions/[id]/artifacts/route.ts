@@ -32,7 +32,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     const pv = await db.planVersion.findUnique({
       where: { id: params.id },
       include: {
-        transition: { include: { client: true, transitionOwner: true, salesLead: true, executiveSponsor: true } },
+        transition: { include: { client: true } },
         primaryTemplate: true,
         assumptions: true,
         risks: true,
@@ -72,12 +72,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       metadata,
       transition: {
         clientName: pv.transition.client.name,
-        opportunityId: pv.transition.opportunityId,
+        salesforceOpportunityUrl: pv.transition.salesforceOpportunityUrl,
         planType: pv.transition.planType,
         productsInScope: JSON.parse(pv.transition.productsInScope),
-        ownerName: pv.transition.transitionOwner.name,
-        salesLeadName: pv.transition.salesLead?.name ?? null,
-        sponsorName: pv.transition.executiveSponsor?.name ?? null,
+        ownerName: pv.transition.engagementDirectorName,
+        salesLeadName: pv.transition.salesLeadName,
+        sponsorName: pv.transition.executiveSponsorName,
       },
       classification: classificationRow
         ? ({

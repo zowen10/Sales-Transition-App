@@ -22,9 +22,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
     if (!pv) return NextResponse.json({ error: 'Plan version not found' }, { status: 404 });
 
-    const pendingApproval = pv.approvals.find((a) => a.status === 'PENDING' && a.approverId === user.id);
+    // Any signed-in user with approval access (enforced above by requireRole) may act on a
+    // pending request — there is no pre-bound approver identity at this stage; the acting
+    // user is recorded as the approver below.
+    const pendingApproval = pv.approvals.find((a) => a.status === 'PENDING');
     if (!pendingApproval) {
-      return NextResponse.json({ error: 'No pending approval request found for you on this plan version.' }, { status: 403 });
+      return NextResponse.json({ error: 'No pending approval request found on this plan version.' }, { status: 403 });
     }
 
     const check = checkPlanReadyForApproval({
@@ -55,7 +58,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     await db.$transaction(async (tx) => {
       await tx.approval.update({
         where: { id: pendingApproval.id },
-        data: { status: decided.status, comment: decided.comment, respondedAt: new Date(decided.respondedAt!) },
+        data: {
+          status: decided.status,
+          comment: decided.comment,
+          respondedAt: new Date(decided.respondedAt!),
+          approverId: user.id,
+        },
       });
 
       await tx.planVersion.update({

@@ -5,7 +5,7 @@ import { TransitionStepper } from '@/components/TransitionStepper';
 export default async function TransitionLayout({ children, params }: { children: React.ReactNode; params: { id: string } }) {
   const transition = await db.transition.findUnique({
     where: { id: params.id },
-    include: { client: true, transitionOwner: true, planVersions: { orderBy: { versionNumber: 'desc' }, take: 1 } },
+    include: { client: true, planVersions: { orderBy: { versionNumber: 'desc' }, take: 1 } },
   });
   if (!transition) notFound();
 
@@ -21,7 +21,7 @@ export default async function TransitionLayout({ children, params }: { children:
             Status: <strong style={{ color: 'var(--ink)' }}>{transition.status.replace(/_/g, ' ')}</strong>
           </span>
           <span>
-            Owner: <strong style={{ color: 'var(--ink)' }}>{transition.transitionOwner.name}</strong>
+            Engagement Director: <strong style={{ color: 'var(--ink)' }}>{transition.engagementDirectorName}</strong>
           </span>
           {latestVersion && (
             <span>

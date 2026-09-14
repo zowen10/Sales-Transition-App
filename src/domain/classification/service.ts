@@ -55,7 +55,6 @@ export function classifyTransition(
   let score = 0;
   const scoreReasons: string[] = [];
   if (planType === 'multi_site') { score += c.multiSitePoints; scoreReasons.push(`multi-site plan (+${c.multiSitePoints})`); }
-  if (planType === 'program') { score += c.programPoints; scoreReasons.push(`program plan (+${c.programPoints})`); }
   if (siteCount) { score += siteCount * c.perSitePoints; scoreReasons.push(`${siteCount} sites (+${(siteCount * c.perSitePoints).toFixed(1)})`); }
   if (integrationCount) { score += integrationCount * c.perIntegrationPoints; scoreReasons.push(`${integrationCount} integrations (+${(integrationCount * c.perIntegrationPoints).toFixed(1)})`); }
   if (usesMif) { score += c.mifPoints; scoreReasons.push(`MIF involved (+${c.mifPoints})`); }
@@ -64,19 +63,14 @@ export function classifyTransition(
   if (hasComplianceRequirements) { score += c.compliancePoints; scoreReasons.push(`compliance/security requirements (+${c.compliancePoints})`); }
 
   let complexityLevel: ComplexityLevel = 'low';
-  if (planType === 'specialized') {
-    complexityLevel = 'custom';
-  } else if (score >= c.highThreshold) {
+  if (score >= c.highThreshold) {
     complexityLevel = 'high';
   } else if (score >= c.mediumThreshold) {
     complexityLevel = 'medium';
   }
   reasons.push({
     field: 'complexityLevel',
-    reason:
-      planType === 'specialized'
-        ? 'Set to "custom" because the plan type is specialized.'
-        : `Score ${score.toFixed(1)} (threshold: medium ${c.mediumThreshold}, high ${c.highThreshold}) from: ${scoreReasons.join(', ') || 'no complexity drivers reported'}.`,
+    reason: `Score ${score.toFixed(1)} (threshold: medium ${c.mediumThreshold}, high ${c.highThreshold}) from: ${scoreReasons.join(', ') || 'no complexity drivers reported'}.`,
     sourceQuestionKeys: [
       'scope.plan_type',
       'scope.site_count',

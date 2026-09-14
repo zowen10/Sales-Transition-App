@@ -20,7 +20,7 @@ export function TopNav({ user }: { user: CurrentUser }) {
     <header style={{ borderBottom: '1px solid var(--header-line)', background: 'var(--header-bg)' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 24 }}>
         <div style={{ fontWeight: 800, fontSize: 14, color: 'var(--header-ink)' }}>
-          Sales Transition <span style={{ color: 'var(--header-muted)', fontWeight: 500 }}>· Flow Builder</span>
+          Handoff <span style={{ color: 'var(--header-muted)', fontWeight: 500 }}>· Flow Builder</span>
         </div>
         <nav style={{ display: 'flex', gap: 4, flex: 1 }} aria-label="Primary">
           {LINKS.concat(isAdmin ? [{ href: '/admin', label: 'Administration' }] : []).map((l) => {

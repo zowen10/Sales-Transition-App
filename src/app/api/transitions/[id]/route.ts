@@ -10,10 +10,8 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       where: { id: params.id },
       include: {
         client: true,
-        transitionOwner: { select: { id: true, name: true, email: true } },
-        salesLead: { select: { id: true, name: true, email: true } },
-        executiveSponsor: { select: { id: true, name: true, email: true } },
         classification: true,
+        documents: { orderBy: { uploadedAt: 'desc' }, include: { uploadedBy: { select: { name: true } } } },
         planVersions: {
           orderBy: { versionNumber: 'asc' },
           select: {
@@ -35,15 +33,23 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       id: transition.id,
       name: transition.name,
       clientName: transition.client.name,
-      opportunityId: transition.opportunityId,
+      salesforceOpportunityUrl: transition.salesforceOpportunityUrl,
+      salesTransitionFolderUrl: transition.salesTransitionFolderUrl,
       planType: transition.planType,
       status: transition.status,
       productsInScope: JSON.parse(transition.productsInScope),
-      owner: transition.transitionOwner,
-      salesLead: transition.salesLead,
-      executiveSponsor: transition.executiveSponsor,
-      expectedDecisionDate: transition.expectedDecisionDate,
+      engagementDirectorName: transition.engagementDirectorName,
+      salesLeadName: transition.salesLeadName,
+      executiveSponsorName: transition.executiveSponsorName,
       currentPlanVersionId: transition.currentPlanVersionId,
+      documents: transition.documents.map((d) => ({
+        id: d.id,
+        source: d.source,
+        filename: d.filename,
+        sharepointUrl: d.sharepointUrl,
+        uploadedByName: d.uploadedBy.name,
+        uploadedAt: d.uploadedAt,
+      })),
       classification: transition.classification
         ? {
             ...transition.classification,

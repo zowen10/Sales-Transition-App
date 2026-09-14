@@ -26,11 +26,6 @@ describe('classification service', () => {
     expect(result.complexityLevel).toBe('high');
   });
 
-  it('always classifies a specialized plan type as custom complexity', () => {
-    const result = classifyTransition({ 'scope.plan_type': 'specialized' });
-    expect(result.complexityLevel).toBe('custom');
-  });
-
   it('derives timeline pressure from start/go-live date spread', () => {
     const tight = classifyTransition({
       'timeline.target_start_date': '2027-01-01',
@@ -46,7 +41,7 @@ describe('classification service', () => {
   });
 
   it('never silently changes without new answers — same input, same output', () => {
-    const input = { 'scope.plan_type': 'program', 'complexity.integration_count': 5 };
+    const input = { 'scope.plan_type': 'multi_site', 'complexity.integration_count': 5 };
     const a = classifyTransition(input);
     const b = classifyTransition(input);
     expect(a).toEqual(b);

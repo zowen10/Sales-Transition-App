@@ -18,7 +18,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
     const pv = await db.planVersion.findUnique({
       where: { id: params.id },
-      include: { transition: { include: { executiveSponsor: true } } },
+      include: { transition: true },
     });
     if (!pv) return NextResponse.json({ error: 'Plan version not found' }, { status: 404 });
 
@@ -43,19 +43,20 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
     const check = checkPlanReadyForSubmission({
       unconfirmedHighImpactAnswerPrompts: unresolved.map((q) => q.prompt),
-      hasExecutiveApprover: Boolean(pv.transition.executiveSponsor),
+      hasExecutiveApprover: Boolean(pv.transition.executiveSponsorName?.trim()),
     });
     if (!check.ok) return NextResponse.json({ error: 'Plan is not ready for submission', blockers: check.blockers }, { status: 400 });
 
     assertPlanVersionTransition(pv.status as 'DRAFT' | 'IN_PROGRESS' | 'READY_FOR_REVIEW' | 'CHANGES_REQUESTED' | 'APPROVED' | 'SUPERSEDED' | 'ARCHIVED', 'READY_FOR_REVIEW');
 
+    // approverId is left unset: any signed-in user with approval access can act on this
+    // request (access/identity is managed at the Flow Builder level, not bound here).
     const approval = await db.$transaction(async (tx) => {
       await tx.planVersion.update({ where: { id: pv.id }, data: { status: 'READY_FOR_REVIEW' } });
       await tx.transition.update({ where: { id: pv.transitionId }, data: { status: 'READY_FOR_REVIEW' } });
       return tx.approval.create({
         data: {
           planVersionId: pv.id,
-          approverId: pv.transition.executiveSponsor!.id,
           approverRole: 'EXECUTIVE_APPROVER',
           status: 'PENDING',
         },
@@ -68,7 +69,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       action: 'plan.submitted_for_approval',
       entityType: 'PlanVersion',
       entityId: pv.id,
-      details: { approverId: approval.approverId },
+      details: { executiveSponsorName: pv.transition.executiveSponsorName },
     });
 
     await getFlowBuilderAdapter().publish({
@@ -76,7 +77,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       transitionId: pv.transitionId,
       planVersionId: pv.id,
       occurredAt: new Date().toISOString(),
-      payload: { approverId: approval.approverId },
+      payload: { executiveSponsorName: pv.transition.executiveSponsorName },
     });
 
     return NextResponse.json({ ok: true, approval });

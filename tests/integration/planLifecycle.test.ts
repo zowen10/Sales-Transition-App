@@ -67,8 +67,8 @@ describe('plan lifecycle integration (real SQLite database)', () => {
       data: {
         clientId: client.id,
         name: 'Integration Test Transition',
-        transitionOwnerId: owner.id,
-        executiveSponsorId: sponsor.id,
+        engagementDirectorName: owner.name,
+        executiveSponsorName: sponsor.name,
         planType: 'SINGLE_SITE',
         status: 'DRAFT',
         productsInScope: JSON.stringify(['wm']),

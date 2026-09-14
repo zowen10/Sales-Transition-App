@@ -41,50 +41,84 @@ interface SeedQuestion {
   highImpact?: boolean;
 }
 
+// Question set modeled on Manhattan Associates' Sales Cycle / Sales Transition
+// meeting document (the sales-to-delivery handoff meeting run by the
+// Engagement Manager/Director with Sales Consulting). Sections and prompts
+// mirror that document's structure, generalized for reuse across clients.
 const QUESTIONS: SeedQuestion[] = [
-  // Engagement context
-  { key: 'engagement.desired_outcomes', section: 'Engagement context', prompt: 'What business outcomes does the client want from this engagement?', responseType: 'text', order: 1 },
-  { key: 'engagement.decision_status', section: 'Engagement context', prompt: 'What is the current decision status, and when is the award expected?', responseType: 'text', order: 2 },
-  { key: 'engagement.sales_commitments', section: 'Engagement context', prompt: 'Are there existing sales commitments or proposal references we must honor?', responseType: 'text', required: false, order: 3 },
+  // Meeting & Attendees
+  { key: 'meeting.date', section: 'Meeting & Attendees', prompt: 'What is the sales-to-delivery transition meeting date?', responseType: 'date', order: 1 },
+  { key: 'meeting.coordinator', section: 'Meeting & Attendees', prompt: 'Who is coordinating this meeting?', responseType: 'text', order: 2 },
+  { key: 'meeting.engagement_manager', section: 'Meeting & Attendees', prompt: 'Who is the Engagement Manager for this transition?', responseType: 'text', order: 3 },
+  { key: 'meeting.attendees', section: 'Meeting & Attendees', prompt: 'Who is present at this meeting (names and roles)?', responseType: 'text', order: 4 },
 
-  // Scope and plan classification
-  { key: 'scope.plan_type', section: 'Scope and plan classification', prompt: 'What is the plan type?', responseType: 'select', options: ['single_site', 'multi_site', 'program', 'specialized'], required: true, highImpact: true, order: 1 },
-  { key: 'scope.site_count', section: 'Scope and plan classification', prompt: 'How many sites are in scope?', responseType: 'number', required: true, order: 2, validationRule: { min: 1 }, visibilityRule: { op: 'in', key: 'scope.plan_type', values: ['multi_site', 'program'] } },
-  { key: 'scope.geography', section: 'Scope and plan classification', prompt: 'What geography/region(s) are in scope?', responseType: 'text', order: 3 },
-  { key: 'scope.rollout_sequence', section: 'Scope and plan classification', prompt: 'What is the desired rollout sequence across sites?', responseType: 'text', order: 4, visibilityRule: { op: 'in', key: 'scope.plan_type', values: ['multi_site', 'program'] } },
-  { key: 'scope.products', section: 'Scope and plan classification', prompt: 'Which Manhattan products/services are in scope?', responseType: 'multiselect', options: ['wm', 'lm', 'sci', 'slotting', 'mif', 'extension'], required: true, highImpact: true, order: 5 },
-  { key: 'scope.reference_engagement', section: 'Scope and plan classification', prompt: 'Is there a reusable template or known reference engagement to model this on?', responseType: 'text', required: false, order: 6 },
+  // Engagement Context & Objectives
+  { key: 'engagement.key_business_requirements', section: 'Engagement Context & Objectives', prompt: "What are the client's key business requirements / project objectives for this engagement?", responseType: 'text', required: true, highImpact: true, order: 1 },
+  { key: 'engagement.desired_outcomes', section: 'Engagement Context & Objectives', prompt: 'What business outcomes does the client want from this engagement?', responseType: 'text', order: 2 },
+  { key: 'engagement.decision_status', section: 'Engagement Context & Objectives', prompt: 'What is the current decision status, and when is the award expected?', responseType: 'text', order: 3 },
+  { key: 'engagement.sales_commitments', section: 'Engagement Context & Objectives', prompt: 'Are there existing sales commitments or proposal references we must honor?', responseType: 'text', required: false, order: 4 },
 
-  // Complexity drivers
-  { key: 'complexity.integration_count', section: 'Complexity drivers', prompt: 'How many integrations are required?', responseType: 'number', order: 1, validationRule: { min: 0 } },
-  { key: 'complexity.uses_mif', section: 'Complexity drivers', prompt: 'Does this engagement involve MIF (Manhattan Integration Framework)?', responseType: 'boolean', order: 2 },
-  { key: 'complexity.custom_extensions', section: 'Complexity drivers', prompt: 'Are custom extensions or special workflows required?', responseType: 'boolean', order: 3 },
-  { key: 'complexity.extension_count', section: 'Complexity drivers', prompt: 'How many custom extensions are anticipated?', responseType: 'number', order: 4, visibilityRule: { op: 'equals', key: 'complexity.custom_extensions', value: true } },
-  { key: 'delivery.data_migration_concerns', section: 'Complexity drivers', prompt: 'Are there data migration or data-quality concerns?', responseType: 'boolean', order: 5 },
-  { key: 'delivery.compliance_requirements', section: 'Complexity drivers', prompt: 'Are there client-specific compliance or security requirements?', responseType: 'boolean', order: 6 },
+  // Scope & Plan Classification
+  { key: 'scope.plan_type', section: 'Scope & Plan Classification', prompt: 'Will all solution(s) sold be implemented at the same time — in one facility (single site) or multiple facilities (multi-site)?', responseType: 'select', options: ['single_site', 'multi_site'], required: true, highImpact: true, order: 1 },
+  { key: 'scope.site_count', section: 'Scope & Plan Classification', prompt: 'How many sites are in scope?', responseType: 'number', required: true, order: 2, validationRule: { min: 1 }, visibilityRule: { op: 'equals', key: 'scope.plan_type', value: 'multi_site' } },
+  { key: 'scope.geography', section: 'Scope & Plan Classification', prompt: 'What site(s)/region(s) are in scope (names, locations, user counts)?', responseType: 'text', order: 3 },
+  { key: 'scope.rollout_sequence', section: 'Scope & Plan Classification', prompt: 'What is the desired rollout sequence across sites (e.g. big bang vs. phased)?', responseType: 'text', order: 4, visibilityRule: { op: 'equals', key: 'scope.plan_type', value: 'multi_site' } },
+  { key: 'scope.products', section: 'Scope & Plan Classification', prompt: 'Which Manhattan products/services were sold and are in scope?', responseType: 'multiselect', options: ['wm', 'lm', 'sci', 'slotting', 'mif', 'extension'], required: true, highImpact: true, order: 5 },
+  { key: 'scope.reference_engagement', section: 'Scope & Plan Classification', prompt: 'Is there a reusable template or known reference engagement to model this on?', responseType: 'text', required: false, order: 6 },
 
-  // Timeline and milestones
-  { key: 'timeline.target_start_date', section: 'Timeline and milestones', prompt: 'What is the target start date?', responseType: 'date', required: true, highImpact: true, order: 1 },
-  { key: 'timeline.target_go_live_date', section: 'Timeline and milestones', prompt: 'What is the target go-live date?', responseType: 'date', required: true, highImpact: true, order: 2 },
-  { key: 'timeline.blackout_periods', section: 'Timeline and milestones', prompt: 'Are there blackout periods or holidays we must plan around?', responseType: 'text', required: false, order: 3 },
-  { key: 'timeline.schedule_confidence', section: 'Timeline and milestones', prompt: 'How confident is the client in this schedule?', responseType: 'select', options: ['low', 'medium', 'high'], order: 4 },
+  // Systems & Integration Landscape
+  { key: 'systems.current_systems', section: 'Systems & Integration Landscape', prompt: 'What relevant systems is the customer currently using, or what systems are we replacing?', responseType: 'text', order: 1 },
+  { key: 'systems.other_impacted', section: 'Systems & Integration Landscape', prompt: 'List any other client systems and/or vendors that will be impacted by this implementation.', responseType: 'text', order: 2 },
+  { key: 'complexity.integration_count', section: 'Systems & Integration Landscape', prompt: 'How many integrations are required?', responseType: 'number', order: 3, validationRule: { min: 0 } },
+  { key: 'complexity.uses_mif', section: 'Systems & Integration Landscape', prompt: 'Does this engagement involve MIF (Manhattan Integration Framework)?', responseType: 'boolean', order: 4 },
+  { key: 'complexity.custom_extensions', section: 'Systems & Integration Landscape', prompt: 'Are custom extensions or significant system customizations expected?', responseType: 'boolean', order: 5 },
+  { key: 'complexity.extension_count', section: 'Systems & Integration Landscape', prompt: 'How many custom extensions are anticipated?', responseType: 'number', order: 6, visibilityRule: { op: 'equals', key: 'complexity.custom_extensions', value: true } },
+  { key: 'delivery.data_migration_concerns', section: 'Systems & Integration Landscape', prompt: 'Are there data migration or data-quality concerns?', responseType: 'boolean', order: 7 },
 
-  // Delivery readiness
-  { key: 'readiness.client_smes', section: 'Delivery readiness', prompt: 'Are client SMEs identified and available?', responseType: 'boolean', order: 1 },
-  { key: 'readiness.environments', section: 'Delivery readiness', prompt: 'Are environments and access ready?', responseType: 'boolean', order: 2 },
-  { key: 'readiness.testing_strategy', section: 'Delivery readiness', prompt: 'What is the testing strategy and is test data ready?', responseType: 'text', order: 3 },
+  // Risks, Constraints & Culture
+  { key: 'risks.known_risks', section: 'Risks, Constraints & Culture', prompt: 'What are the major issues, risks, and/or constraints with this implementation? Are there any externally mandated deadlines?', responseType: 'text', order: 1 },
+  { key: 'delivery.compliance_requirements', section: 'Risks, Constraints & Culture', prompt: 'Are there client-specific compliance or security requirements?', responseType: 'boolean', order: 2 },
+  { key: 'engagement.third_party_involvement', section: 'Risks, Constraints & Culture', prompt: 'Will other business partners or vendors be involved in this project? If so, who?', responseType: 'text', order: 3 },
+  { key: 'engagement.client_pm_experience', section: 'Risks, Constraints & Culture', prompt: "What experience does the client's PM and other team members have with this type of project?", responseType: 'text', order: 4 },
+  { key: 'engagement.corporate_culture', section: 'Risks, Constraints & Culture', prompt: "Briefly describe the client's corporate culture and any significant political challenges we may face.", responseType: 'text', order: 5 },
 
-  // Commercial assumptions
-  { key: 'commercial.model', section: 'Commercial assumptions', prompt: 'What is the commercial model?', responseType: 'select', options: ['fixed_fee', 'time_and_materials', 'other'], required: true, highImpact: true, order: 1 },
-  { key: 'commercial.rate_card', section: 'Commercial assumptions', prompt: 'Which services rate or rate card applies?', responseType: 'text', order: 2 },
-  { key: 'commercial.contingency_percent', section: 'Commercial assumptions', prompt: 'What contingency percentage should be applied?', responseType: 'number', order: 3, validationRule: { min: 0, max: 25 } },
-  { key: 'commercial.approval_threshold', section: 'Commercial assumptions', prompt: 'What approval threshold and approvers are required?', responseType: 'text', order: 4 },
+  // Stakeholders & Team
+  { key: 'stakeholders.steering_committee', section: 'Stakeholders & Team', prompt: 'Have members of the Steering Committee and Project Team been named? List names and roles (e.g. Executive Sponsor, VP IT, IT Director, Ops sponsor).', responseType: 'text', required: true, highImpact: true, order: 1 },
+  { key: 'engagement.methodology_reviewed', section: 'Stakeholders & Team', prompt: "Does the client have a base understanding of MA's methodology? Was the RPM process reviewed with the client's project team?", responseType: 'boolean', order: 2 },
+  { key: 'engagement.contract_changes', section: 'Stakeholders & Team', prompt: 'Have significant changes occurred since the contract was signed?', responseType: 'text', required: false, order: 3 },
 
-  // Risks and open questions
-  { key: 'risks.known_risks', section: 'Risks and open questions', prompt: 'What known risks should be documented?', responseType: 'text', order: 1 },
-  { key: 'risks.unvalidated_assumptions', section: 'Risks and open questions', prompt: 'What assumptions are not yet validated?', responseType: 'text', order: 2 },
-  { key: 'risks.decisions_required', section: 'Risks and open questions', prompt: 'What decisions are required before kickoff?', responseType: 'text', required: false, order: 4 },
-  { key: 'risks.confidence_level', section: 'Risks and open questions', prompt: 'Overall, how confident are you in these answers?', responseType: 'select', options: ['low', 'medium', 'high'], required: true, highImpact: true, order: 3 },
+  // Contract & Commercial Summary
+  { key: 'commercial.solutions_sold', section: 'Contract & Commercial Summary', prompt: 'List the types of solutions/services sold to the customer.', responseType: 'text', order: 1 },
+  { key: 'commercial.model', section: 'Contract & Commercial Summary', prompt: 'What is the commercial model?', responseType: 'select', options: ['fixed_fee', 'time_and_materials', 'other'], required: true, highImpact: true, order: 2 },
+  { key: 'commercial.rate_card', section: 'Contract & Commercial Summary', prompt: 'What is the onshore/US services rate (USD per hour)?', responseType: 'text', order: 3 },
+  { key: 'commercial.offshore_rate', section: 'Contract & Commercial Summary', prompt: 'What is the offshore rate, if applicable (USD per hour)?', responseType: 'number', required: false, order: 4 },
+  { key: 'commercial.offshore_cap_percent', section: 'Contract & Commercial Summary', prompt: 'What is the offshore hours cap, as a percentage of total implementation hours?', responseType: 'number', required: false, order: 5, validationRule: { min: 0, max: 100 } },
+  { key: 'commercial.contingency_percent', section: 'Contract & Commercial Summary', prompt: 'What contingency percentage should be applied?', responseType: 'number', order: 6, validationRule: { min: 0, max: 25 } },
+  { key: 'commercial.special_incentives', section: 'Contract & Commercial Summary', prompt: 'Describe any special incentives, rates, or penalties.', responseType: 'text', required: false, order: 7 },
+  { key: 'commercial.approval_threshold', section: 'Contract & Commercial Summary', prompt: 'What approval threshold and required approvers apply?', responseType: 'text', order: 8 },
+
+  // Timeline & Milestones
+  { key: 'timeline.target_start_date', section: 'Timeline & Milestones', prompt: 'When does the customer want to begin the project (kickoff date)?', responseType: 'date', required: true, highImpact: true, order: 1 },
+  { key: 'timeline.target_go_live_date', section: 'Timeline & Milestones', prompt: 'Are there externally mandated deadlines? What is the target go-live date?', responseType: 'date', required: true, highImpact: true, order: 2 },
+  { key: 'timeline.training_schedule', section: 'Timeline & Milestones', prompt: 'Has client training been scheduled (L1/L2/ProActive dates)?', responseType: 'text', required: false, order: 3 },
+  { key: 'timeline.blackout_periods', section: 'Timeline & Milestones', prompt: 'Are there blackout periods or holidays we must plan around?', responseType: 'text', required: false, order: 4 },
+  { key: 'timeline.schedule_confidence', section: 'Timeline & Milestones', prompt: 'How confident is the client in this schedule?', responseType: 'select', options: ['low', 'medium', 'high'], order: 5 },
+
+  // Delivery Readiness
+  { key: 'readiness.environments_provisioned', section: 'Delivery Readiness', prompt: 'Have environments been provisioned for the client?', responseType: 'boolean', order: 1 },
+  { key: 'readiness.client_smes', section: 'Delivery Readiness', prompt: 'Are client SMEs identified and available?', responseType: 'boolean', order: 2 },
+  { key: 'readiness.testing_strategy', section: 'Delivery Readiness', prompt: 'What is the testing strategy and is test data ready?', responseType: 'text', order: 3 },
+
+  // Future Opportunities
+  { key: 'future.hardware_opportunities', section: 'Future Opportunities', prompt: 'Any future hardware sales opportunities?', responseType: 'text', required: false, order: 1 },
+  { key: 'future.subscription_opportunities', section: 'Future Opportunities', prompt: 'Any future product subscription opportunities?', responseType: 'text', required: false, order: 2 },
+  { key: 'future.environment_opportunities', section: 'Future Opportunities', prompt: 'Any future environment opportunities (e.g. additional test/performance environments)?', responseType: 'text', required: false, order: 3 },
+  { key: 'future.services_opportunities', section: 'Future Opportunities', prompt: 'Any future services opportunities (e.g. CWV, additional workstreams)?', responseType: 'text', required: false, order: 4 },
+
+  // Risks and Open Questions
+  { key: 'risks.unvalidated_assumptions', section: 'Risks and Open Questions', prompt: 'What assumptions are not yet validated?', responseType: 'text', order: 1 },
+  { key: 'risks.decisions_required', section: 'Risks and Open Questions', prompt: 'What decisions are required before kickoff?', responseType: 'text', required: false, order: 2 },
+  { key: 'risks.confidence_level', section: 'Risks and Open Questions', prompt: 'Overall, how confident are you in these answers?', responseType: 'select', options: ['low', 'medium', 'high'], required: true, highImpact: true, order: 3 },
 ];
 
 async function main() {
@@ -174,11 +208,11 @@ async function main() {
     create: {
       id: 'seed-transition-acme-wm',
       clientId: client.id,
-      opportunityId: 'OPP-10432',
+      salesforceOpportunityUrl: 'https://manh.lightning.force.com/lightning/r/Opportunity/0060g_seed/view',
       name: 'Acme Distribution — Phase 1 WM Rollout',
-      transitionOwnerId: director.id,
-      salesLeadId: salesLead.id,
-      executiveSponsorId: sponsor.id,
+      engagementDirectorName: director.name,
+      salesLeadName: salesLead.name,
+      executiveSponsorName: sponsor.name,
       planType: 'SINGLE_SITE',
       status: 'DRAFT',
       productsInScope: JSON.stringify(['wm']),
