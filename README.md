@@ -42,6 +42,22 @@ Seeded accounts (password `password123` for all — **local dev only**):
 | `admin@example.com` | Administrator |
 | `pat.sales@example.com` | Contributor (Sales Lead) |
 
+### If a schema/migration pull breaks your local database
+
+`prisma/dev.db` is a disposable local file, not a shared/production database. While this
+project is under active development, a `git pull` can bring in a schema change that isn't
+safe to apply on top of your existing local data (e.g. a new required column with no way
+to backfill old rows) — Prisma will refuse with an error like `P3018` and stop applying
+further migrations until it's resolved. The fix is always safe here:
+
+```bash
+npx prisma migrate reset --force   # drops dev.db, replays migrations, regenerates the client, reseeds
+npm run dev
+```
+
+This deletes local data (seed fixtures and anything else you've clicked into existence)
+and puts you back on a clean, fully-migrated database in one step.
+
 ## Environment variables
 
 See `.env.example`. Notable ones:
