@@ -10,7 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run src",
     "test:watch": "vitest",
-    "test:integration:setup": "rm -f prisma/test.db && DATABASE_URL=\"file:./prisma/test.db\" prisma migrate deploy",
+    "test:integration:setup": "rm -f prisma/test.db && DATABASE_URL=\"file:./test.db\" prisma migrate deploy",
     "test:integration": "vitest run tests/integration",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

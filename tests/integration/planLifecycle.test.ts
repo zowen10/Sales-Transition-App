@@ -1,7 +1,7 @@
 // Integration test: exercises the domain layer against a real (file-based,
 // migrated) SQLite database — no mocking of Prisma. Run with
 // `npm run test:integration` after `npm run test:integration:setup`.
-process.env.DATABASE_URL = 'file:./prisma/test.db';
+process.env.DATABASE_URL = 'file:./test.db';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaClient } from '@prisma/client';
