@@ -37,6 +37,7 @@ export const REFERENCE_LEVERS: LeverConfig = {
 
 export function referenceScenarioInput(overrides: Partial<ScenarioInput> = {}): ScenarioInput {
   return {
+    planStartDate: '2026-09-21',
     totalTestCases: 450,
     startingIssues: 22,
     targetWorkday: REFERENCE_TARGET_WORKDAY,

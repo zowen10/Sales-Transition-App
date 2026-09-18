@@ -6,7 +6,7 @@ import { updateStaffingScenarioSchema } from '@/server/schemas';
 import { handleApiError } from '@/server/apiError';
 import { recordAuditEvent } from '@/lib/audit';
 import { solveRequiredFtes } from '@/domain/staffingModel/engine';
-import type { LeverConfig } from '@/domain/staffingModel/types';
+import type { LeverConfig, ScenarioInput } from '@/domain/staffingModel/types';
 
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   try {
@@ -20,7 +20,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     const current = scenario.versions.find((v) => v.id === scenario.currentVersionId) ?? scenario.versions[0];
     const sensitivity = current
       ? solveRequiredFtes({
-          ...(JSON.parse(current.scenarioInput) as { totalTestCases: number; startingIssues: number; targetWorkday: number }),
+          ...(JSON.parse(current.scenarioInput) as Omit<ScenarioInput, 'levers'>),
           levers: JSON.parse(current.leverConfig) as LeverConfig,
         })
       : null;
@@ -51,6 +51,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
         label: v.label,
         parentVersionId: v.parentVersionId,
         checkpointDate: v.checkpointDate?.toISOString() ?? null,
+        varianceSummary: v.varianceSummary ? JSON.parse(v.varianceSummary) : null,
         createdAt: v.createdAt.toISOString(),
       })),
     });

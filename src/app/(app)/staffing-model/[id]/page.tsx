@@ -16,7 +16,7 @@ interface ScenarioDetail {
     versionNumber: number;
     label: string;
     leverConfig: LeverConfig;
-    scenarioInput: { totalTestCases: number; startingIssues: number; targetWorkday: number };
+    scenarioInput: { planStartDate: string; totalTestCases: number; startingIssues: number; targetWorkday: number };
     result: SimulationResult;
     checkpointDate: string | null;
   } | null;
@@ -29,6 +29,7 @@ const int = (n: number) => Math.round(n).toLocaleString('en-US');
 export default function StaffingScenarioWorkspace({ params }: { params: { id: string } }) {
   const [scenario, setScenario] = useState<ScenarioDetail | null>(null);
   const [levers, setLevers] = useState<LeverConfig | null>(null);
+  const [planStartDate, setPlanStartDate] = useState('');
   const [totalTestCases, setTotalTestCases] = useState(0);
   const [startingIssues, setStartingIssues] = useState(0);
   const [targetWorkday, setTargetWorkday] = useState(0);
@@ -46,6 +47,7 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
     setScenario(body);
     if (body.currentVersion) {
       setLevers(body.currentVersion.leverConfig);
+      setPlanStartDate(body.currentVersion.scenarioInput.planStartDate);
       setTotalTestCases(body.currentVersion.scenarioInput.totalTestCases);
       setStartingIssues(body.currentVersion.scenarioInput.startingIssues);
       setTargetWorkday(body.currentVersion.scenarioInput.targetWorkday);
@@ -65,7 +67,7 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         label: scenario?.currentVersion?.label ?? 'Baseline',
-        scenarioInput: { totalTestCases, startingIssues, targetWorkday, levers },
+        scenarioInput: { planStartDate, totalTestCases, startingIssues, targetWorkday, levers },
       }),
     });
     setSaving(false);
@@ -125,6 +127,12 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
         <div style={{ display: 'flex', gap: 8 }}>
           <Link href={`/staffing-model/${params.id}/analysis`} className="btn">
             Issue analysis
+          </Link>
+          <Link href={`/staffing-model/${params.id}/checkpoint`} className="btn">
+            Load actuals
+          </Link>
+          <Link href={`/staffing-model/${params.id}/history`} className="btn">
+            History
           </Link>
           <button type="button" className="btn" onClick={deriveFromImports} disabled={deriving}>
             {deriving ? 'Deriving…' : 'Derive from imports'}
@@ -198,6 +206,10 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
       <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
         <aside className="card" style={{ padding: 16 }}>
           <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12 }}>Scenario basics</div>
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Plan start date</label>
+            <input className="input" type="date" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} />
+          </div>
           <div style={{ marginBottom: 10 }}>
             <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4 }}>Total test cases</label>
             <input className="input" type="number" min={0} value={totalTestCases} onChange={(e) => setTotalTestCases(Number(e.target.value) || 0)} />

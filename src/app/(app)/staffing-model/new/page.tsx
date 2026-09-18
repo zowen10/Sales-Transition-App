@@ -7,6 +7,7 @@ import { defaultLeverConfig } from '@/domain/staffingModel/defaults';
 export default function NewStaffingScenarioPage() {
   const router = useRouter();
   const [name, setName] = useState('');
+  const [planStartDate, setPlanStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [totalTestCases, setTotalTestCases] = useState(450);
   const [startingIssues, setStartingIssues] = useState(0);
   const [targetWorkday, setTargetWorkday] = useState(35);
@@ -26,7 +27,7 @@ export default function NewStaffingScenarioPage() {
       body: JSON.stringify({
         name,
         label: 'Baseline',
-        scenarioInput: { totalTestCases, startingIssues, targetWorkday, levers: defaultLeverConfig() },
+        scenarioInput: { planStartDate, totalTestCases, startingIssues, targetWorkday, levers: defaultLeverConfig() },
       }),
     });
     setLoading(false);
@@ -50,6 +51,10 @@ export default function NewStaffingScenarioPage() {
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--muted)', marginBottom: 4 }}>Plan name</label>
           <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Rust-Oleum go-live recovery" />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--muted)', marginBottom: 4 }}>Plan start date</label>
+          <input className="input" type="date" value={planStartDate} onChange={(e) => setPlanStartDate(e.target.value)} />
         </div>
         <div style={{ marginBottom: 12 }}>
           <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--muted)', marginBottom: 4 }}>Total test cases</label>

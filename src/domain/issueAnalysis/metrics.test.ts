@@ -74,4 +74,15 @@ describe('issueAnalysis metrics', () => {
     expect(asOf.resolvedIssuesCumulative).toBe(1);
     expect(asOf.openBacklog).toBe(2);
   });
+
+  it('computeActualsAsOf counts a record dated exactly on asOfDate, even as a full ISO timestamp', () => {
+    // IssueRecord dates come back from Prisma as full ISO timestamps (toISOString()), not
+    // plain "YYYY-MM-DD" strings — a record created/resolved exactly on the checkpoint date
+    // must still count as known-by-then rather than being excluded by a naive string compare.
+    const timestamped: IssueRecordLike[] = [
+      record({ id: 't1', createdDate: '2026-01-06T00:00:00.000Z', resolvedDate: null }),
+    ];
+    const asOf = computeActualsAsOf(timestamped, '2026-01-06');
+    expect(asOf.openBacklog).toBe(1);
+  });
 });

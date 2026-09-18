@@ -47,6 +47,8 @@ export interface LeverConfig {
 }
 
 export interface ScenarioInput {
+  /** ISO date the scenario's workday offsets (day 0) are anchored to — lets a checkpoint's real calendar date be converted into a workday offset. */
+  planStartDate: string;
   totalTestCases: number;
   startingIssues: number;
   /** Workday offset used by insight/gate calculations (e.g. the target Go-Live date). */
@@ -98,7 +100,8 @@ export interface FteSensitivityRow {
 
 export interface ActualsSnapshot {
   asOfDay: number;
-  executedCases: number;
+  /** Omitted when the source data can't support it — an issue-list export alone has no test-execution counts. Never guessed. */
+  executedCases?: number;
   openBacklog: number;
   resolvedIssuesCumulative: number;
 }

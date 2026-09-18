@@ -104,6 +104,7 @@ export const leverConfigSchema = z.object({
 });
 
 export const scenarioInputSchema = z.object({
+  planStartDate: z.string().min(1),
   totalTestCases: z.number().min(0),
   startingIssues: z.number().min(0),
   targetWorkday: z.number().int().min(0),
@@ -135,6 +136,11 @@ export const simulateStaffingScenarioSchema = z.object({
 
 export const confirmMappingSchema = z.object({
   mapping: z.record(z.enum(CANONICAL_ISSUE_FIELDS), z.string().nullable()),
+});
+
+export const checkpointStaffingScenarioSchema = z.object({
+  actualsImportBatchId: z.string().min(1),
+  asOfDate: z.string().min(1),
 });
 
 export const issueImportDecisionSchema = z.object({

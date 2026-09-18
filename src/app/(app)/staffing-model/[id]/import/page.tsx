@@ -18,6 +18,7 @@ export default function ImportIssueListPage({ params }: { params: { id: string }
   const [file, setFile] = useState<File | null>(null);
   const [stageLabel, setStageLabel] = useState('');
   const [purpose, setPurpose] = useState<'baseline' | 'actuals_checkpoint'>('baseline');
+  const [asOfDate, setAsOfDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [uploading, setUploading] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -36,6 +37,7 @@ export default function ImportIssueListPage({ params }: { params: { id: string }
     form.append('scenarioId', params.id);
     if (stageLabel.trim()) form.append('stageLabel', stageLabel.trim());
     form.append('purpose', purpose);
+    if (purpose === 'actuals_checkpoint') form.append('asOfDate', asOfDate);
     const res = await fetch('/api/issue-imports', { method: 'POST', body: form });
     setUploading(false);
     if (!res.ok) {
@@ -93,6 +95,12 @@ export default function ImportIssueListPage({ params }: { params: { id: string }
               <option value="actuals_checkpoint">Actuals checkpoint (compares to a forecast)</option>
             </select>
           </div>
+          {purpose === 'actuals_checkpoint' && (
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 11, fontWeight: 800, color: 'var(--muted)', marginBottom: 4 }}>As-of date</label>
+              <input className="input" type="date" value={asOfDate} onChange={(e) => setAsOfDate(e.target.value)} />
+            </div>
+          )}
           {error && <div style={{ color: '#c0392b', fontSize: 12, marginBottom: 12 }}>{error}</div>}
           <button type="button" className="btn btn-primary" onClick={doUpload} disabled={uploading}>
             {uploading ? 'Uploading…' : 'Upload'}

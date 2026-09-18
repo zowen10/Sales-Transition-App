@@ -21,30 +21,33 @@ function statusFor(forecast: number, actual: number, higherIsBetter: boolean): V
 export function compareForecastToActuals(forecast: SimulationResult, actuals: ActualsSnapshot): VarianceSummary {
   const forecastRow = rowAtDay(forecast, actuals.asOfDay);
 
-  const metrics: VarianceMetric[] = [
-    {
+  const metrics: VarianceMetric[] = [];
+
+  if (actuals.executedCases !== undefined) {
+    metrics.push({
       metric: 'executedCases',
       forecast: forecastRow.executedCumulative,
       actual: actuals.executedCases,
       delta: actuals.executedCases - forecastRow.executedCumulative,
       status: statusFor(forecastRow.executedCumulative, actuals.executedCases, true),
-    },
-    {
-      metric: 'openBacklog',
-      forecast: forecastRow.backlog,
-      actual: actuals.openBacklog,
-      delta: actuals.openBacklog - forecastRow.backlog,
-      // Lower backlog than forecast is better, so invert the comparison.
-      status: statusFor(forecastRow.backlog, actuals.openBacklog, false),
-    },
-    {
-      metric: 'resolvedIssuesCumulative',
-      forecast: forecastRow.issueWorkCumulative,
-      actual: actuals.resolvedIssuesCumulative,
-      delta: actuals.resolvedIssuesCumulative - forecastRow.issueWorkCumulative,
-      status: statusFor(forecastRow.issueWorkCumulative, actuals.resolvedIssuesCumulative, true),
-    },
-  ];
+    });
+  }
+
+  metrics.push({
+    metric: 'openBacklog',
+    forecast: forecastRow.backlog,
+    actual: actuals.openBacklog,
+    delta: actuals.openBacklog - forecastRow.backlog,
+    // Lower backlog than forecast is better, so invert the comparison.
+    status: statusFor(forecastRow.backlog, actuals.openBacklog, false),
+  });
+  metrics.push({
+    metric: 'resolvedIssuesCumulative',
+    forecast: forecastRow.issueWorkCumulative,
+    actual: actuals.resolvedIssuesCumulative,
+    delta: actuals.resolvedIssuesCumulative - forecastRow.issueWorkCumulative,
+    status: statusFor(forecastRow.issueWorkCumulative, actuals.resolvedIssuesCumulative, true),
+  });
 
   return { asOfDay: actuals.asOfDay, metrics };
 }

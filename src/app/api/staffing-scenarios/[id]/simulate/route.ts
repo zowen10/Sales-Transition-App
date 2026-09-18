@@ -39,6 +39,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
           label: body.label ?? parent?.label ?? 'Baseline',
           leverConfig: JSON.stringify(body.scenarioInput.levers),
           scenarioInput: JSON.stringify({
+            planStartDate: body.scenarioInput.planStartDate,
             totalTestCases: body.scenarioInput.totalTestCases,
             startingIssues: body.scenarioInput.startingIssues,
             targetWorkday: body.scenarioInput.targetWorkday,

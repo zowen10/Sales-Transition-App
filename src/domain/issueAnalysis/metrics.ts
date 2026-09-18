@@ -95,10 +95,16 @@ export function computeBlockedCaseImpact(records: IssueRecordLike[]): BlockedCas
   };
 }
 
-/** What's actually known as of a checkpoint date, straight from the confirmed IssueRecords — never extrapolated. */
+/**
+ * What's actually known as of a checkpoint date, straight from the confirmed
+ * IssueRecords — never extrapolated. Dates are compared as plain calendar
+ * days (not full ISO timestamps), so a record created/resolved exactly on
+ * `asOfDate` still counts as known-by-then.
+ */
 export function computeActualsAsOf(records: IssueRecordLike[], asOfDate: string) {
-  const knownByAsOf = records.filter((r) => !r.createdDate || r.createdDate <= asOfDate);
-  const resolvedByAsOf = knownByAsOf.filter((r) => r.resolvedDate && r.resolvedDate <= asOfDate);
+  const asOfDay = asOfDate.slice(0, 10);
+  const knownByAsOf = records.filter((r) => !r.createdDate || r.createdDate.slice(0, 10) <= asOfDay);
+  const resolvedByAsOf = knownByAsOf.filter((r) => r.resolvedDate && r.resolvedDate.slice(0, 10) <= asOfDay);
   const openBacklog = knownByAsOf.length - resolvedByAsOf.length;
   return { asOfDate, resolvedIssuesCumulative: resolvedByAsOf.length, openBacklog };
 }
