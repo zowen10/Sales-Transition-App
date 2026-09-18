@@ -5,6 +5,7 @@ import Link from 'next/link';
 import LeverList from '@/components/LeverList';
 import BurnChart from '@/components/BurnChart';
 import type { LeverConfig, SimulationResult, FteSensitivityRow } from '@/domain/staffingModel/types';
+import type { DerivedLeverProposal } from '@/domain/issueAnalysis/deriveLevers';
 
 interface ScenarioDetail {
   id: string;
@@ -34,6 +35,9 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('');
+  const [deriveProposal, setDeriveProposal] = useState<{ sourceBatches: { id: string; stageLabel: string | null; filename: string; rowCount: number }[]; proposal: DerivedLeverProposal } | null>(null);
+  const [deriveError, setDeriveError] = useState<string | null>(null);
+  const [deriving, setDeriving] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/staffing-scenarios/${params.id}`);
@@ -74,6 +78,34 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
     setStatus(`Recalculated at ${new Date().toLocaleTimeString()}`);
   }
 
+  async function deriveFromImports() {
+    setDeriving(true);
+    setDeriveError(null);
+    const res = await fetch(`/api/staffing-scenarios/${params.id}/derive-levers`);
+    setDeriving(false);
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setDeriveError(body.error ?? 'Failed to derive levers.');
+      setDeriveProposal(null);
+      return;
+    }
+    setDeriveProposal(await res.json());
+  }
+
+  function applyDerivedProposal() {
+    if (!deriveProposal || !levers) return;
+    const p = deriveProposal.proposal;
+    setStartingIssues(p.startingIssues);
+    setLevers({
+      ...levers,
+      calendarDrivenIssues: p.levers.calendarDrivenIssues,
+      blockedCaseThrottling: { ...levers.blockedCaseThrottling, ...p.levers.blockedCaseThrottling },
+      reopenRate: { ...levers.reopenRate, ...p.levers.reopenRate },
+    });
+    setDeriveProposal(null);
+    setStatus('Derived values applied — click Recalculate to save this version.');
+  }
+
   if (!scenario) return <div style={{ color: 'var(--muted)' }}>Loading…</div>;
 
   const result = scenario.currentVersion?.result;
@@ -94,6 +126,9 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
           <Link href={`/staffing-model/${params.id}/analysis`} className="btn">
             Issue analysis
           </Link>
+          <button type="button" className="btn" onClick={deriveFromImports} disabled={deriving}>
+            {deriving ? 'Deriving…' : 'Derive from imports'}
+          </button>
           <button type="button" className="btn btn-primary" onClick={recalculate} disabled={saving || !levers}>
             {saving ? 'Recalculating…' : 'Recalculate'}
           </button>
@@ -101,6 +136,64 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
       </div>
 
       {error && <div style={{ color: '#c0392b', fontSize: 12, marginBottom: 12 }}>{error}</div>}
+      {deriveError && <div style={{ color: '#c0392b', fontSize: 12, marginBottom: 12 }}>{deriveError}</div>}
+
+      {deriveProposal && levers && (
+        <div className="card" style={{ padding: 16, marginBottom: 16, borderColor: 'var(--teal)' }}>
+          <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 4 }}>Derived from imports</div>
+          <div style={{ color: 'var(--muted)', fontSize: 11, marginBottom: 10 }}>
+            Based on {deriveProposal.proposal.basedOnRecordCount} issues from{' '}
+            {deriveProposal.sourceBatches.map((b) => b.stageLabel || b.filename).join(', ')}. Nothing is applied until
+            you click Apply.
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 10 }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: 10, textTransform: 'uppercase' }}>
+                <th style={{ padding: '6px 8px' }}>Field</th>
+                <th style={{ padding: '6px 8px' }}>Current</th>
+                <th style={{ padding: '6px 8px' }}>Proposed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style={{ borderTop: '1px solid var(--line)' }}>
+                <td style={{ padding: '6px 8px' }}>Starting issues</td>
+                <td style={{ padding: '6px 8px' }}>{startingIssues}</td>
+                <td style={{ padding: '6px 8px', fontWeight: 800 }}>{deriveProposal.proposal.startingIssues}</td>
+              </tr>
+              <tr style={{ borderTop: '1px solid var(--line)' }}>
+                <td style={{ padding: '6px 8px' }}>Calendar issue rate / day</td>
+                <td style={{ padding: '6px 8px' }}>{levers.calendarDrivenIssues.enabled ? levers.calendarDrivenIssues.baseRatePerDay.toFixed(2) : 'off'}</td>
+                <td style={{ padding: '6px 8px', fontWeight: 800 }}>{deriveProposal.proposal.levers.calendarDrivenIssues.baseRatePerDay.toFixed(2)}</td>
+              </tr>
+              <tr style={{ borderTop: '1px solid var(--line)' }}>
+                <td style={{ padding: '6px 8px' }}>Blocked cases / issue</td>
+                <td style={{ padding: '6px 8px' }}>{levers.blockedCaseThrottling.blockedCasesPerIssue.toFixed(2)}</td>
+                <td style={{ padding: '6px 8px', fontWeight: 800 }}>{deriveProposal.proposal.levers.blockedCaseThrottling.blockedCasesPerIssue.toFixed(2)}</td>
+              </tr>
+              <tr style={{ borderTop: '1px solid var(--line)' }}>
+                <td style={{ padding: '6px 8px' }}>Reopen %</td>
+                <td style={{ padding: '6px 8px' }}>{levers.reopenRate.reopenRatePercent.toFixed(1)}</td>
+                <td style={{ padding: '6px 8px', fontWeight: 800 }}>{deriveProposal.proposal.levers.reopenRate.reopenRatePercent.toFixed(1)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div style={{ fontSize: 10, color: 'var(--muted)', marginBottom: 10 }}>
+            {deriveProposal.proposal.trace.map((t) => (
+              <div key={t.field}>
+                {t.field}: {t.formula} → {t.value.toFixed(2)}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="btn btn-primary" onClick={applyDerivedProposal}>
+              Apply
+            </button>
+            <button type="button" className="btn" onClick={() => setDeriveProposal(null)}>
+              Discard
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
         <aside className="card" style={{ padding: 16 }}>
