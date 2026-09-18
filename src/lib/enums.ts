@@ -67,3 +67,19 @@ export const ARTIFACT_JOB_STATUSES = ['QUEUED', 'RUNNING', 'COMPLETE', 'FAILED']
 
 export const ANSWER_SOURCES = ['voice', 'text', 'imported', 'manual'] as const;
 export const RESPONSE_TYPES = ['text', 'number', 'date', 'select', 'multiselect', 'boolean'] as const;
+
+export const STAFFING_SCENARIO_STATUSES = ['ACTIVE', 'ARCHIVED'] as const;
+
+export const ISSUE_BURN_LEVER_KEYS = [
+  'steadyStateExecution',
+  'executionDrivenIssues',
+  'calendarDrivenIssues',
+  'issueInfluxEvents',
+  'blockedCaseThrottling',
+  'reopenRate',
+  'clientReviewBuffer',
+  'resolutionCapacity',
+] as const;
+
+export const ISSUE_IMPORT_DECISIONS = ['include', 'exclude', 'needs_review'] as const;
+export const ISSUE_IMPORT_PURPOSES = ['baseline', 'actuals_checkpoint'] as const;

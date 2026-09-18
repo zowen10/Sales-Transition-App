@@ -70,3 +70,60 @@ export const linkSharepointDocumentSchema = z.object({
   sharepointUrl: z.string().min(1),
   filename: z.string().min(1),
 });
+
+// ---------------------------------------------------------------------------
+// Staffing / issue-burn recovery calculator
+// ---------------------------------------------------------------------------
+
+const issueInfluxEventSchema = z.object({
+  id: z.string().min(1),
+  label: z.string().min(1),
+  day: z.number().int().min(0),
+  issueCount: z.number().min(0),
+});
+
+const calendarIssueRatePointSchema = z.object({
+  day: z.number().int().min(0),
+  ratePerDay: z.number().min(0),
+});
+
+export const leverConfigSchema = z.object({
+  steadyStateExecution: z.object({ enabled: z.boolean(), casesPerDay: z.number().min(0) }),
+  executionDrivenIssues: z.object({ enabled: z.boolean(), casesPerIssue: z.number().min(0.1) }),
+  calendarDrivenIssues: z.object({
+    enabled: z.boolean(),
+    baseRatePerDay: z.number().min(0),
+    schedule: z.array(calendarIssueRatePointSchema).optional(),
+  }),
+  issueInfluxEvents: z.object({ enabled: z.boolean(), events: z.array(issueInfluxEventSchema) }),
+  blockedCaseThrottling: z.object({ enabled: z.boolean(), blockedCasesPerIssue: z.number().min(0) }),
+  reopenRate: z.object({ enabled: z.boolean(), reopenRatePercent: z.number().min(0).max(100) }),
+  clientReviewBuffer: z.object({ enabled: z.boolean(), bufferDays: z.number().int().min(0) }),
+  resolutionCapacity: z.object({ enabled: z.boolean(), issuesPerDayPerFte: z.number().min(0), fteCount: z.number().min(0) }),
+});
+
+export const scenarioInputSchema = z.object({
+  totalTestCases: z.number().min(0),
+  startingIssues: z.number().min(0),
+  targetWorkday: z.number().int().min(0),
+  levers: leverConfigSchema,
+});
+
+export const createStaffingScenarioSchema = z.object({
+  name: z.string().min(1),
+  clientId: z.string().optional(),
+  transitionId: z.string().optional(),
+  label: z.string().default('Baseline'),
+  scenarioInput: scenarioInputSchema,
+});
+
+export const updateStaffingScenarioSchema = z.object({
+  name: z.string().min(1).optional(),
+  status: z.enum(['ACTIVE', 'ARCHIVED']).optional(),
+});
+
+export const simulateStaffingScenarioSchema = z.object({
+  label: z.string().min(1).optional(),
+  scenarioInput: scenarioInputSchema,
+  resourcePlanOverrides: z.record(z.string(), z.record(z.string(), z.number())).optional(),
+});

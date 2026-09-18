@@ -40,6 +40,8 @@ model User {
   templatesOwned        Template[]
   artifactJobsRequested ArtifactJob[]
   documentsUploaded     ProjectDocument[]
+  staffingScenarios     StaffingScenario[]
+  staffingScenarioVersionsCreated StaffingScenarioVersion[]
 }
 
 // ---------------------------------------------------------------------------
@@ -58,6 +60,7 @@ model Client {
   name        String
   createdAt   DateTime     @default(now())
   transitions Transition[]
+  staffingScenarios StaffingScenario[]
 }
 
 model Transition {
@@ -83,6 +86,7 @@ model Transition {
   planVersions   PlanVersion[]
   auditEvents    AuditEvent[]
   documents      ProjectDocument[]
+  staffingScenarios StaffingScenario[]
 
   @@index([clientId])
 }
@@ -395,4 +399,61 @@ model AuditEvent {
 
   @@index([transitionId])
   @@index([entityType, entityId])
+}
+
+// ---------------------------------------------------------------------------
+// Staffing / issue-burn recovery calculator (standalone module)
+// ---------------------------------------------------------------------------
+// A StaffingScenario is a durable, revisitable PLAN, not a one-shot report:
+// StaffingScenarioVersion is chained like PlanVersion (parent/child), and a
+// new version is created either by a plain manual edit or by loading actuals
+// in at a checkpoint (see checkpointDate/actualsImportBatchId/varianceSummary
+// below). It may optionally reference a Client/Transition for context, but
+// neither is required — this module is standalone.
+//
+// StaffingScenarioStatus: ACTIVE | ARCHIVED
+
+model StaffingScenario {
+  id               String    @id @default(cuid())
+  name             String
+  status           String    @default("ACTIVE")
+  clientId         String?
+  client           Client?   @relation(fields: [clientId], references: [id])
+  transitionId     String?
+  transition       Transition? @relation(fields: [transitionId], references: [id])
+  currentVersionId String?
+  createdById      String
+  createdBy        User      @relation(fields: [createdById], references: [id])
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  versions StaffingScenarioVersion[]
+
+  @@index([clientId])
+  @@index([transitionId])
+}
+
+model StaffingScenarioVersion {
+  id              String                    @id @default(cuid())
+  scenarioId      String
+  scenario        StaffingScenario          @relation(fields: [scenarioId], references: [id])
+  versionNumber   Int
+  parentVersionId String?
+  parentVersion   StaffingScenarioVersion?  @relation("StaffingScenarioVersionParent", fields: [parentVersionId], references: [id])
+  childVersions   StaffingScenarioVersion[] @relation("StaffingScenarioVersionParent")
+  label           String                    @default("Baseline")
+  leverConfig     String // JSON: LeverConfig (src/domain/staffingModel/types.ts)
+  scenarioInput   String // JSON: totalTestCases/startingIssues/targetWorkday (ScenarioInput minus levers)
+  resourcePlanOverrides String? // JSON: per-week manual hour overrides
+  resultSnapshot  String // JSON: full SimulationResult incl. trace[]
+  derivedFrom     String? // JSON: which IssueImportBatch id(s)/date range fed any derived levers
+  checkpointDate  DateTime? // set when this version exists because actuals were loaded in
+  actualsImportBatchId String? // IssueImportBatch id (no FK yet — added when that model lands)
+  varianceSummary String? // JSON: VarianceSummary as of checkpointDate
+  createdById     String
+  createdBy       User                      @relation(fields: [createdById], references: [id])
+  createdAt       DateTime                  @default(now())
+
+  @@unique([scenarioId, versionNumber])
+  @@index([scenarioId])
 }

@@ -10,6 +10,7 @@ const LINKS = [
   { href: '/transitions/new', label: 'New Project' },
   { href: '/templates', label: 'Templates' },
   { href: '/approvals', label: 'Approvals' },
+  { href: '/staffing-model', label: 'Staffing Model' },
 ];
 
 export function TopNav({ user }: { user: CurrentUser }) {
