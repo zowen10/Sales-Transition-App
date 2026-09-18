@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import LeverList from '@/components/LeverList';
 import BurnChart from '@/components/BurnChart';
 import type { LeverConfig, SimulationResult, FteSensitivityRow } from '@/domain/staffingModel/types';
@@ -89,9 +90,14 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
             {status ? ` · ${status}` : ''}
           </p>
         </div>
-        <button type="button" className="btn btn-primary" onClick={recalculate} disabled={saving || !levers}>
-          {saving ? 'Recalculating…' : 'Recalculate'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link href={`/staffing-model/${params.id}/analysis`} className="btn">
+            Issue analysis
+          </Link>
+          <button type="button" className="btn btn-primary" onClick={recalculate} disabled={saving || !levers}>
+            {saving ? 'Recalculating…' : 'Recalculate'}
+          </button>
+        </div>
       </div>
 
       {error && <div style={{ color: '#c0392b', fontSize: 12, marginBottom: 12 }}>{error}</div>}

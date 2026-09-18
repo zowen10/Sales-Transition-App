@@ -42,6 +42,8 @@ model User {
   documentsUploaded     ProjectDocument[]
   staffingScenarios     StaffingScenario[]
   staffingScenarioVersionsCreated StaffingScenarioVersion[]
+  issueImportsUploaded  IssueImportBatch[] @relation("IssueImportUploadedBy")
+  issueImportMappingsConfirmed IssueImportBatch[] @relation("IssueImportMappingConfirmedBy")
 }
 
 // ---------------------------------------------------------------------------
@@ -428,6 +430,7 @@ model StaffingScenario {
   updatedAt        DateTime  @updatedAt
 
   versions StaffingScenarioVersion[]
+  issueImports IssueImportBatch[]
 
   @@index([clientId])
   @@index([transitionId])
@@ -456,4 +459,62 @@ model StaffingScenarioVersion {
 
   @@unique([scenarioId, versionNumber])
   @@index([scenarioId])
+}
+
+// ---------------------------------------------------------------------------
+// Issue-list import + LLM-proposed column mapping
+// ---------------------------------------------------------------------------
+// An IssueImportBatch is one uploaded export (a test-execution issue list, a
+// Salesforce export, etc). Column mapping is a two-step stage gate: an LLM
+// adapter (src/adapters/issueImportMapping) proposes suggestedMapping from
+// the header row + sample rows; nothing is parsed into IssueRecord rows
+// until a human reviews/edits and confirms it (confirmedMapping). An import
+// can exist standalone (scenarioId null) before ever being attached to a
+// scenario, so "upload and analyze" doesn't require a plan to exist first.
+//
+// IssueImportDecision: include | exclude | needs_review
+// IssueImportPurpose: baseline | actuals_checkpoint
+
+model IssueImportBatch {
+  id                   String    @id @default(cuid())
+  scenarioId           String?
+  scenario             StaffingScenario? @relation(fields: [scenarioId], references: [id])
+  filename             String
+  storagePath          String
+  stageLabel           String?
+  purpose              String    @default("baseline")
+  asOfDate             DateTime?
+  suggestedMapping     String? // JSON: { [canonicalField]: { column: string, confidence: number } }
+  confirmedMapping     String? // JSON: { [canonicalField]: string | null } — null until confirmed
+  mappingConfirmedById String?
+  mappingConfirmedBy   User?     @relation("IssueImportMappingConfirmedBy", fields: [mappingConfirmedById], references: [id])
+  mappingConfirmedAt   DateTime?
+  rowCount             Int       @default(0)
+  decision             String    @default("needs_review")
+  pmNote               String?
+  expectedUplift       String? // JSON: { reason: string, effectiveFrom: number, adjustment: number }
+  uploadedById         String
+  uploadedBy           User      @relation("IssueImportUploadedBy", fields: [uploadedById], references: [id])
+  uploadedAt           DateTime  @default(now())
+
+  records IssueRecord[]
+
+  @@index([scenarioId])
+}
+
+model IssueRecord {
+  id                  String           @id @default(cuid())
+  importBatchId       String
+  importBatch         IssueImportBatch @relation(fields: [importBatchId], references: [id])
+  externalId          String?
+  issueType           String?
+  priority            String?
+  status              String?
+  createdDate         DateTime?
+  resolvedDate        DateTime?
+  reopenedCount       Int              @default(0)
+  blockedTestCaseCount Int             @default(0)
+  raw                 String // JSON: original row, for traceability
+
+  @@index([importBatchId])
 }

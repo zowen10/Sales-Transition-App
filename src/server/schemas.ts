@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { ANSWER_SOURCES, ARTIFACT_TYPES, PLAN_TYPES } from '@/lib/enums';
+import { ANSWER_SOURCES, ARTIFACT_TYPES, ISSUE_IMPORT_DECISIONS, PLAN_TYPES } from '@/lib/enums';
+import { CANONICAL_ISSUE_FIELDS } from '@/domain/issueAnalysis/types';
 
 export const createTransitionSchema = z.object({
   clientName: z.string().min(1),
@@ -126,4 +127,21 @@ export const simulateStaffingScenarioSchema = z.object({
   label: z.string().min(1).optional(),
   scenarioInput: scenarioInputSchema,
   resourcePlanOverrides: z.record(z.string(), z.record(z.string(), z.number())).optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Issue-list import + LLM column-mapping stage gate
+// ---------------------------------------------------------------------------
+
+export const confirmMappingSchema = z.object({
+  mapping: z.record(z.enum(CANONICAL_ISSUE_FIELDS), z.string().nullable()),
+});
+
+export const issueImportDecisionSchema = z.object({
+  decision: z.enum(ISSUE_IMPORT_DECISIONS).optional(),
+  pmNote: z.string().optional(),
+  expectedUplift: z
+    .object({ reason: z.string().min(1), effectiveFrom: z.number().int().min(0), adjustment: z.number() })
+    .nullable()
+    .optional(),
 });
