@@ -50,8 +50,9 @@ describe('AnthropicScenarioChatAdapter', () => {
       reopenRate: { enabled: false, reopenRatePercent: 15 },
     });
 
-    const [, requestInit] = fetchMock.mock.calls[0];
-    const requestBody = JSON.parse(requestInit.body);
+    const call = fetchMock.mock.calls[0];
+    if (!call) throw new Error('fetch was not called');
+    const requestBody = JSON.parse((call[1] as RequestInit).body as string);
     expect(requestBody.tools[0].name).toBe('propose_lever_change');
     expect(requestBody.system).toContain('450');
   });

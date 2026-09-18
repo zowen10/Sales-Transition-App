@@ -141,6 +141,12 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
           <Link href={`/staffing-model/${params.id}/history`} className="btn">
             History
           </Link>
+          <a href={`/api/staffing-scenarios/${params.id}/export?format=xlsx`} className="btn">
+            Export Excel
+          </a>
+          <a href={`/api/staffing-scenarios/${params.id}/export?format=md`} className="btn">
+            Export Markdown
+          </a>
           <button type="button" className="btn" onClick={deriveFromImports} disabled={deriving}>
             {deriving ? 'Deriving…' : 'Derive from imports'}
           </button>
