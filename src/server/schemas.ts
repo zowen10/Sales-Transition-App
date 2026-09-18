@@ -130,6 +130,10 @@ export const simulateStaffingScenarioSchema = z.object({
   resourcePlanOverrides: z.record(z.string(), z.record(z.string(), z.number())).optional(),
 });
 
+export const scenarioChatMessageSchema = z.object({
+  message: z.string().min(1),
+});
+
 // ---------------------------------------------------------------------------
 // Issue-list import + LLM column-mapping stage gate
 // ---------------------------------------------------------------------------

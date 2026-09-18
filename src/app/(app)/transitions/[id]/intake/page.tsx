@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { useSpeechToText } from '@/lib/useSpeechToText';
 
 interface QuestionDTO {
   id: string;
@@ -60,34 +61,6 @@ function QuestionInput({
     return <input className="input" type="date" value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} />;
   }
   return <textarea className="input" rows={3} value={(value as string) ?? ''} onChange={(e) => onChange(e.target.value)} style={{ resize: 'vertical' }} />;
-}
-
-function useSpeechToText(onResult: (text: string) => void) {
-  const [recording, setRecording] = useState(false);
-  const [supported, setSupported] = useState(false);
-
-  useEffect(() => {
-    setSupported(typeof window !== 'undefined' && Boolean((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition));
-  }, []);
-
-  const start = useCallback(() => {
-    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SR) return;
-    const recognition = new SR();
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onstart = () => setRecording(true);
-    recognition.onend = () => setRecording(false);
-    recognition.onerror = () => setRecording(false);
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0]?.[0]?.transcript ?? '';
-      onResult(transcript);
-    };
-    recognition.start();
-  }, [onResult]);
-
-  return { start, recording, supported };
 }
 
 export default function IntakePage({ params }: { params: { id: string } }) {

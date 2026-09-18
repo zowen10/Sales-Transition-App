@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import LeverList from '@/components/LeverList';
 import BurnChart from '@/components/BurnChart';
+import ScenarioChatPanel from '@/components/ScenarioChatPanel';
 import type { LeverConfig, SimulationResult, FteSensitivityRow } from '@/domain/staffingModel/types';
 import type { DerivedLeverProposal } from '@/domain/issueAnalysis/deriveLevers';
 
@@ -108,6 +109,12 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
     setStatus('Derived values applied — click Recalculate to save this version.');
   }
 
+  function applyChatProposal(patch: Partial<LeverConfig>) {
+    if (!levers) return;
+    setLevers({ ...levers, ...patch });
+    setStatus('Chat-proposed change applied — click Recalculate to save this version.');
+  }
+
   if (!scenario) return <div style={{ color: 'var(--muted)' }}>Loading…</div>;
 
   const result = scenario.currentVersion?.result;
@@ -203,7 +210,7 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr)', gap: 16, alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '280px minmax(0, 1fr) 300px', gap: 16, alignItems: 'start' }}>
         <aside className="card" style={{ padding: 16 }}>
           <div style={{ fontWeight: 800, fontSize: 13, marginBottom: 12 }}>Scenario basics</div>
           <div style={{ marginBottom: 10 }}>
@@ -294,6 +301,8 @@ export default function StaffingScenarioWorkspace({ params }: { params: { id: st
             </>
           )}
         </main>
+
+        {levers && <ScenarioChatPanel scenarioId={params.id} currentLevers={levers} onApplyProposal={applyChatProposal} />}
       </div>
     </div>
   );

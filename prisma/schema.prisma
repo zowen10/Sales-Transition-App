@@ -44,6 +44,7 @@ model User {
   staffingScenarioVersionsCreated StaffingScenarioVersion[]
   issueImportsUploaded  IssueImportBatch[] @relation("IssueImportUploadedBy")
   issueImportMappingsConfirmed IssueImportBatch[] @relation("IssueImportMappingConfirmedBy")
+  scenarioChatTurns     ScenarioChatTurn[]
 }
 
 // ---------------------------------------------------------------------------
@@ -436,6 +437,27 @@ model StaffingScenario {
   @@index([transitionId])
 }
 
+// ScenarioChatRole: user | assistant
+//
+// The assistant only ever produces `content` (prose) and an optional
+// `proposedChange` (a JSON lever-diff) — it never writes to a
+// StaffingScenarioVersion directly. `applied` is set true only once a human
+// clicks Apply in the UI, same posture as a derive-from-import proposal.
+model ScenarioChatTurn {
+  id                String                  @id @default(cuid())
+  scenarioVersionId String
+  scenarioVersion   StaffingScenarioVersion @relation(fields: [scenarioVersionId], references: [id])
+  role              String
+  content           String
+  proposedChange    String? // JSON: Partial<LeverConfig>
+  applied           Boolean                 @default(false)
+  createdById       String
+  createdBy         User                    @relation(fields: [createdById], references: [id])
+  createdAt         DateTime                @default(now())
+
+  @@index([scenarioVersionId])
+}
+
 model StaffingScenarioVersion {
   id              String                    @id @default(cuid())
   scenarioId      String
@@ -456,6 +478,8 @@ model StaffingScenarioVersion {
   createdById     String
   createdBy       User                      @relation(fields: [createdById], references: [id])
   createdAt       DateTime                  @default(now())
+
+  chatTurns ScenarioChatTurn[]
 
   @@unique([scenarioId, versionNumber])
   @@index([scenarioId])
